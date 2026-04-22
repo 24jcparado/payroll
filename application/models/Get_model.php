@@ -268,11 +268,10 @@ defined('BASEPATH') OR exit('No direct script access allowed');
             return $this->db
                 ->select('
                     p.*,
+                    e.*,
                     d.date_period,
                     d.qr_code,
-                    p.name,
-                    e.position,
-                    e.unit
+                    p.name
                 ')
                 ->from('tbl_py_payroll p')
                 ->join('tbl_employee e', 'e.employee_id = p.employee_id')
@@ -631,6 +630,44 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                 'tbl_employee.employee_id = tbl_py_payroll_dw.employee_id',
                 'left'
             );
+
+            return $this->db->get()->result();
+        }
+
+        public function getGSISDataByPayroll($payroll_period_id)
+        {
+            $campus = $this->session->userdata('campus');
+
+            $this->db->select('e.*, p.gsis, p.pagibig, p.philhealth');
+            $this->db->from('tbl_employee e');
+            $this->db->join('tbl_py_payroll p', 'p.employee_id = e.employee_id');
+
+            $this->db->where('p.payroll_period_id', $payroll_period_id);
+
+            if (!empty($campus)) {
+                $this->db->where('e.campus', $campus);
+            }
+
+            return $this->db->get()->result();
+        }
+
+        public function getPayrollInfo($payroll_id)
+        {
+            return $this->db
+                ->where('payroll_id', $payroll_id)
+                ->get('tbl_py_payroll')
+                ->row();
+        }
+
+        public function getEmployeesWithoutGSIS()
+        {
+            $this->db->from('tbl_employee');
+
+            // gsis_no is NULL or empty
+            $this->db->group_start();
+                $this->db->where('gsis_no IS NULL', null, false);
+                $this->db->or_where('gsis_no', '');
+            $this->db->group_end();
 
             return $this->db->get()->result();
         }

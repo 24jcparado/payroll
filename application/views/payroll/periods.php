@@ -1,364 +1,253 @@
 
 <style>
-    #savedPayrollTable tbody tr {
-        transition: 0.2s ease-in-out;
-    }
+    /* Progress Stepper Styling */
+.workflow-vertical {
+    position: relative;
+    padding-left: 1.5rem;
+}
+.workflow-vertical::before {
+    content: '';
+    position: absolute;
+    left: 7px;
+    top: 5px;
+    bottom: 5px;
+    width: 2px;
+    background: #e9ecef;
+}
+.step-item {
+    position: relative;
+    padding-bottom: 1.5rem;
+}
+.step-dot {
+    position: absolute;
+    left: -21px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #fff;
+    border: 2px solid #ced4da;
+    z-index: 2;
+}
+.step-item.active .step-dot { border-color: #0d6efd; background: #0d6efd; box-shadow: 0 0 0 4px rgba(13, 110, 253, 0.2); }
+.step-item.completed .step-dot { border-color: #198754; background: #198754; }
+.step-item.completed .step-text { color: #198754; font-weight: 600; }
 
-    #savedPayrollTable tbody tr:hover {
-        background-color: #f8f9fa;
-    }
+/* Table Hover Effects */
+#savedPayrollTable tbody tr:hover {
+    background-color: rgba(123, 17, 19, 0.03) !important;
+    cursor: pointer;
+}
 
-    .badge {
-        font-size: 12px;
-        border-radius: 50px;
+/* Particulars Preview Box */
+#particulars_display {
+    background-color: #f8f9fa;
+    border: 1px dashed #ced4da;
+    color: #495057;
+    font-style: italic;
+    font-size: 0.9rem;
+}
+/* Professional Tabs Styling */
+    .nav-pills-custom .nav-link {
+        color: #6c757d;
+        font-weight: 600;
+        background: #f8f9fa;
+        border-radius: 8px;
+        border: 1px solid transparent;
+        transition: all 0.2s;
     }
+    .nav-pills-custom .nav-link.active {
+        background-color: var(--evsu-red) !important;
+        color: white !important;
+        box-shadow: 0 4px 10px rgba(107, 15, 26, 0.2);
+    }
+    .nav-pills-custom .nav-link:not(.active):hover {
+        background-color: #eee;
+    }
+    
+    .x-small { font-size: 0.75rem; }
+    .btn-maroon { background-color: #6b0f1a; color: white; transition: 0.3s; }
+    .btn-maroon:hover { background-color: #4a0a0b; color: white; transform: translateY(-2px); }
 </style>
-<main id="mainContent">
-    <?php $this->load->view('template/admin_topbar')?>
-    <button type="button" class="btn btn-primary mb-3" data-bs-toggle="modal" data-bs-target="#addPeriodModal">
-        <i class="bi bi-plus-lg me-1"></i> Add Payroll Period
-    </button>
-    <div class="row g-3">
-        <div class="col-12 col-lg-9">
-            <div class="card shadow-sm mb-4">
-                <div class="card-header bg-primary text-white d-flex align-items-center">
-                    <i class="bi bi-calendar-event me-2"></i>
-                    <h6 class="mb-0 fw-bold">Saved Payroll Periods</h6>
+<?php 
+// Updated Workflow Steps based on your requirements
+$steps = [
+    1 => 'HR',
+    2 => 'Admin',
+    3 => 'Budget',
+    4 => 'Accounting',
+    5 => 'VP Signature',
+    6 => 'Cashier'
+];
 
-                </div>
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-hover align-middle mb-0" id="savedPayrollTable">
-                            <thead class="table-light">
-                                <tr class="text-center">
-                                    <th style="width:140px;">Payroll No.</th>
-                                    <th>Description</th>
-                                    <th style="width:220px;">Approval Status</th>
-                                    <th style="width:150px;">Action</th>
-                                </tr>
-                            </thead>
-
-                            <tbody>
-
-                            <?php if(!empty($payroll)): ?>
-                                <?php foreach($payroll as $row): ?>
-
-                                    <?php
-                                        $steps = [
-                                            1 => 'HRMDO',
-                                            2 => 'Accounting',
-                                            3 => 'Budget',
-                                            4 => 'Bank'
-                                        ];
-                                    ?>
-
-                                    <tr>
-
-                                        <!-- Payroll Number -->
-                                        <td class="text-center fw-bold text-primary">
-                                            <?= htmlspecialchars($row->payroll_number) ?>
-                                        </td>
-
-                                        <!-- Description Column -->
-                                        <td>
-                                            <!-- Payroll Type Emphasis -->
-                                            <div class="mb-2">
-                                                <?php
-                                                    $type = strtolower($row->payroll_type);
-                                                    $typeClass = 'bg-primary';
-                                                    
-                                                    if (strpos($type, 'regular') !== false) {
-                                                        $typeClass = 'bg-success';
-                                                    } elseif (strpos($type, 'cos') !== false) {
-                                                        $typeClass = 'bg-info text-dark';
-                                                    } elseif (strpos($type, 'part') !== false) {
-                                                        $typeClass = 'bg-warning text-dark';
-                                                    } elseif (strpos($type, 'special') !== false) {
-                                                        $typeClass = 'bg-danger';
-                                                    }
-                                                ?>
-
-                                                <span class="badge <?= $typeClass ?> px-3 py-2 fs-6">
-                                                    <?= htmlspecialchars($row->payroll_type) ?>
-                                                </span>
-                                            </div>
-
-                                            <!-- Other Metadata -->
-                                            <div class="small text-muted">
-                                                <div><strong>Unit:</strong> <?= htmlspecialchars($row->unit) ?></div>
-                                                <div><strong>Date Period:</strong> <?= htmlspecialchars($row->date_period) ?></div>
-                                            </div>
-                                        </td>
-
-                                        <!-- Approval Status -->
-                                        <td>
-                                            <div class="d-flex flex-wrap gap-1">
-
-                                                <?php foreach($steps as $key => $label): ?>
-
-                                                    <?php
-                                                        $badgeClass = 'bg-light text-muted';
-
-                                                        if ($row->status > $key) {
-                                                            $badgeClass = 'bg-success';
-                                                        } elseif ($row->status == $key) {
-                                                            $badgeClass = 'bg-warning text-dark';
-                                                        }
-                                                    ?>
-
-                                                    <span class="badge <?= $badgeClass ?> px-3 py-2">
-                                                        <?= $label ?>
-                                                    </span>
-
-                                                <?php endforeach; ?>
-                                            </div>
-
-                                            <div class="small mt-2">
-                                                <?php if($row->status < 4): ?>
-                                                    <span class="text-muted">
-                                                        Currently at:
-                                                        <strong>
-                                                            <?= $steps[$row->status] ?? 'Pending' ?>
-                                                        </strong>
-                                                    </span>
-                                                <?php else: ?>
-                                                    <span class="text-success fw-semibold">
-                                                        Fully Approved
-                                                    </span>
-                                                <?php endif; ?>
-                                            </div>
-                                        </td>
-
-                                        <!-- Action -->
-                                        <td class="text-center">
-                                            <div class="btn-group btn-group-sm" role="group">
-
-                                                <?php if($row->status < 4): ?>
-
-                                                    <!-- RUN PAYROLL (Primary Action) -->
-                                                    <a href="<?= base_url('payroll/run/'.$row->payroll_period_id) ?>"
-                                                    class="btn btn-success"
-                                                    title="Run Payroll">
-                                                        <i class="bi bi-calculator me-1"></i> Run
-                                                    </a>
-
-                                                    <!-- EDIT -->
-                                                    <a href="javascript:void(0);" class="btn btn-outline-primary btn-edit-payroll" title="Edit Payroll"
-                                                    data-id="<?= $row->payroll_period_id ?>"
-                                                    data-number="<?= $row->payroll_number ?>"
-                                                    data-type="<?= $row->payroll_type ?>"
-                                                    data-unit="<?= $row->unit ?>"
-                                                    data-date_period="<?= $row->date_period ?>"
-                                                    data-particulars="<?= htmlspecialchars($row->particulars) ?>"
-                                                    >
-                                                        <i class="bi bi-pencil-square me-1"></i> Edit
-                                                    </a>
-
-                                                    <!-- DELETE (Use POST for security) -->
-                                                    <form action="<?= base_url('payroll/delete/'.$row->payroll_period_id) ?>" 
-                                                        method="post" 
-                                                        onsubmit="return confirm('Are you sure you want to delete this payroll record?');"
-                                                        style="display:inline-block;">
-
-                                                        <button type="submit" class="btn btn-outline-danger" title="Delete Payroll">
-                                                            <i class="bi bi-trash me-1"></i> Delete
-                                                        </button>
-                                                    </form>
-
-                                                <?php else: ?>
-
-                                                    <!-- COMPLETED STATE -->
-                                                    <button class="btn btn-outline-secondary" disabled>
-                                                        <i class="bi bi-check-circle me-1"></i> Completed
-                                                    </button>
-
-                                                <?php endif; ?>
-
-                                            </div>
-                                        </td>
-
-                                    </tr>
-
-                                <?php endforeach; ?>
-
-                            <?php else: ?>
-
-                                <tr>
-                                    <td colspan="4" class="text-center text-muted py-4">
-                                        No payroll records found.
-                                    </td>
-                                </tr>
-
-                            <?php endif; ?>
-
-                            </tbody>
-                        </table>
-                        </div>
-                </div>
+$current_month = date('m');
+// ... rest of your code
+?>
+<main id="mainContent" class="py-4">
+    <div class="container-fluid px-md-4">
+        <div class="topbar d-flex justify-content-between align-items-center p-3 bg-white shadow-sm rounded-3 mb-4">
+            <div class="d-flex align-items-center">
+                <button class="btn btn-maroon d-lg-none me-2" id="menuToggle"><i class="bi bi-list"></i></button>
+                <h5 class="m-0 fw-bold text-dark"><?= $period ?></h5>
             </div>
+            <div id="runningClock" class="fw-bold text-muted small d-none d-sm-block"></div>
         </div>
 
-        <!-- Payroll Status Legend (Right / Bottom on mobile) -->
-        <div class="col-12 col-lg-3">
-            <div class="card shadow-sm">
-                <div class="card-header bg-primary text-white">
-                    <h6 class="mb-0 fw-bold">
-                        <i class="bi bi-info-circle me-2"></i>
-                        Payroll Status Legend
-                    </h6>
-                </div>
-                <div class="card-body small text-muted">
-                    <!-- ================= LEGEND ================= -->
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <button type="button" class="btn btn-maroon rounded-pill px-4 shadow-sm" data-bs-toggle="modal" data-bs-target="#addPeriodModal">
+                <i class="bi bi-plus-lg me-1"></i> New Payroll Entry
+            </button>
+        </div>
 
-                    <!-- ACTIVE -->
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <span class="badge bg-success d-inline-flex align-items-center mb-1">
-                                <i class="bi bi-play-circle-fill me-1"></i> Active
-                            </span>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="small text-muted">
-                                Payroll period is open and ready for processing.
-                            </div>
-                        </div>
+        <div class="row g-4">
+            <div class="col-12 col-lg-9">
+                <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+                    <div class="card-header bg-white border-0 pt-3">
+                        <ul class="nav nav-pills nav-pills-custom" id="payrollTabs" role="tablist">
+                            <li class="nav-item">
+                                <button class="nav-link active btn-sm px-4" id="active-tab" data-bs-toggle="pill" data-bs-target="#activePayrolls" type="button">
+                                    Active Queue 
+                                    <span class="badge bg-danger ms-1">
+                                        <?= count(array_filter($payroll, fn($r) => $r->status < 4)) ?>
+                                    </span>
+                                </button>
+                            </li>
+                            <li class="nav-item ms-2">
+                                <button class="nav-link btn-sm px-4" id="history-tab" data-bs-toggle="pill" data-bs-target="#historyPayrolls" type="button">
+                                    Disbursement History
+                                </button>
+                            </li>
+                        </ul>
                     </div>
 
-                    <hr>
-
-                    <!-- PROCESSING -->
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <span class="badge bg-warning text-dark d-inline-flex align-items-center mb-1">
-                                <i class="bi bi-hourglass-split me-1"></i> Processing
-                            </span>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="small text-muted">
-                                Payroll computation is currently in progress.
-                            </div>
-                        </div>
-                    </div>
-
-                    <hr>
-
-                    <!-- PROCESSED -->
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <span class="badge bg-primary d-inline-flex align-items-center mb-1">
-                                <i class="bi bi-check-circle-fill me-1"></i> Processed
-                            </span>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="small text-muted">
-                                Payroll has been finalized and is ready for release.
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- ================= CAROUSEL SECTION ================= -->
-
-                    <hr class="my-4">
-
-                    <h6 class="fw-bold text-center mb-3">
-                        <i class="bi bi-check2-all me-1 text-success"></i>
-                        Recently Processed
-                    </h6>
-
-                    <?php 
-                    $processedPayrolls = array_filter($payroll, function($row){
-                        return $row->status == 4; // Fully processed
-                    });
-                    ?>
-
-                    <?php if(!empty($processedPayrolls)): ?>
-
-                    <div id="workflowCarousel" class="carousel slide mt-4" data-bs-ride="carousel">
-                        <div class="carousel-inner">
-
-                            <?php
-                            $first = true;
-                            foreach ($payrolls as $row):
-
-                                // Only show workflow (exclude fully completed)
-                                if (!in_array($row->status, [1,2,3,4,5,6,7])) continue;
-                            ?>
-
-                            <div class="carousel-item <?= $first ? 'active' : '' ?>">
-                                <div class="card shadow-sm">
-                                    <div class="card-body">
-
-                                        <h6 class="fw-bold mb-1">
-                                            Payroll #<?= $row->payroll_no ?>
-                                        </h6>
-
-                                        <p class="small text-muted mb-3">
-                                            Period: <?= $row->period ?>
-                                        </p>
-
-                                        <!-- WORKFLOW VISUAL -->
-                                        <div class="workflow-steps d-flex justify-content-between text-center"
-                                            data-status="<?= $row->status ?>">
-
-                                            <div class="step" id="step-1">
-                                                <div class="circle">1</div>
-                                                <small>HRMDO</small>
-                                            </div>
-
-                                            <div class="step" id="step-2">
-                                                <div class="circle">2</div>
-                                                <small>ACCOUNTING</small>
-                                            </div>
-
-                                            <div class="step" id="step-3">
-                                                <div class="circle">3</div>
-                                                <small>BUDGET</small>
-                                            </div>
-
-                                            <div class="step" id="step-4">
-                                                <div class="circle">4</div>
-                                                <small>BANK</small>
-                                            </div>
-
-                                            <div class="step" id="step-5">
-                                                <div class="circle">5</div>
-                                                <small>COMPLETED</small>
-                                            </div>
-
-                                        </div>
-                                        <!-- END WORKFLOW -->
-
-                                    </div>
+                    <div class="card-body p-0">
+                        <div class="tab-content">
+                            <div class="tab-pane fade show active" id="activePayrolls">
+                                <div class="table-responsive">
+                                    <table class="table table-hover align-middle mb-0">
+                                        <thead class="bg-light">
+                                            <tr class="text-muted x-small text-uppercase">
+                                                <th class="ps-4">Reference</th>
+                                                <th>Payroll Details</th>
+                                                <th>Status</th>
+                                                <th class="text-end pe-4">Manage</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <?php 
+                                            $activeItems = array_filter($payroll, fn($r) => $r->status < 4);
+                                            if(!empty($activeItems)): foreach($activeItems as $row): 
+                                            ?>
+                                            <tr>
+                                                <td class="ps-4">
+                                                    <span class="text-dark fw-bold"><?= $row->payroll_number ?></span><br>
+                                                    <small class="text-muted"><?= date('M d, Y', strtotime($row->created_at)) ?></small>
+                                                </td>
+                                                <td>
+                                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle mb-1"><?= strtoupper($row->payroll_type) ?></span>
+                                                    <div class="small fw-semibold"><?= $row->unit ?></div>
+                                                    <div class="x-small text-muted"><?= $row->date_period ?></div>
+                                                </td>
+                                                <td>
+                                                    <?php if($row->status > 6): ?>
+                                                        <span class="text-success small fw-bold">
+                                                            <i class="bi bi-check-all"></i> Fully Released by Cashier
+                                                        </span>
+                                                    <?php else: ?>
+                                                        <div class="d-flex align-items-center">
+                                                            <div class="spinner-grow spinner-grow-sm text-warning me-2" role="status"></div>
+                                                            <span class="small fw-bold text-dark">
+                                                                <?= isset($steps[$row->status]) ? $steps[$row->status] : 'Pending HR' ?>
+                                                            </span>
+                                                        </div>
+                                                    <?php endif; ?>
+                                                </td>
+                                                <td class="text-end pe-4">
+                                                    <div class="dropdown">
+                                                        <button class="btn btn-light btn-sm rounded-circle" data-bs-toggle="dropdown"><i class="bi bi-three-dots-vertical"></i></button>
+                                                        <ul class="dropdown-menu shadow border-0">
+                                                            <li><a class="dropdown-item" href="<?= base_url('payroll/run/'.$row->payroll_period_id) ?>"><i class="bi bi-calculator me-2"></i> Run Process</a></li>
+                                                            <li><a class="dropdown-item btn-edit-payroll" href="javascript:void(0);" data-id="<?= $row->payroll_period_id ?>" data-number="<?= $row->payroll_number ?>"><i class="bi bi-pencil me-2"></i> Edit</a></li>
+                                                            <li><hr class="dropdown-divider"></li>
+                                                            <li><a class="dropdown-item text-danger" href="javascript:void(0);" onclick="confirmDelete(<?= $row->payroll_period_id ?>)"><i class="bi bi-trash me-2"></i> Delete</a></li>
+                                                        </ul>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                            <?php endforeach; else: ?>
+                                                <tr><td colspan="4" class="text-center py-5 text-muted">No active payroll processing found.</td></tr>
+                                            <?php endif; ?>
+                                        </tbody>
+                                    </table>
                                 </div>
                             </div>
 
-                            <?php
-                                $first = false;
-                            endforeach;
-                            ?>
-
+                            <div class="tab-pane fade" id="historyPayrolls">
+                                <div class="table-responsive">
+                                    <table class="table table-hover align-middle mb-0">
+                                        <thead class="bg-light">
+                                            <tr class="text-muted x-small text-uppercase">
+                                                <th class="ps-4">Reference</th>
+                                                <th>Payroll Details</th>
+                                                <th>Completion Date</th>
+                                                <th class="text-end pe-4">View</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <?php 
+                                            $historyItems = array_filter($payroll, fn($r) => $r->status >= 4);
+                                            if(!empty($historyItems)): foreach($historyItems as $row): 
+                                            ?>
+                                            <tr class="opacity-75">
+                                                <td class="ps-4">
+                                                    <span class="text-muted fw-bold"><?= $row->payroll_number ?></span>
+                                                </td>
+                                                <td>
+                                                    <span class="badge bg-light text-dark border mb-1"><?= strtoupper($row->payroll_type) ?></span>
+                                                    <div class="small fw-semibold text-muted"><?= $row->unit ?></div>
+                                                </td>
+                                                <td><span class="text-success small fw-bold"><i class="bi bi-check-circle-fill me-1"></i> Processed</span></td>
+                                                <td class="text-end pe-4">
+                                                    <a href="<?= base_url('payroll/view/'.$row->payroll_period_id) ?>" class="btn btn-sm btn-light rounded-pill px-3">View Details</a>
+                                                </td>
+                                            </tr>
+                                            <?php endforeach; else: ?>
+                                                <tr><td colspan="4" class="text-center py-5 text-muted">No completed records in history.</td></tr>
+                                            <?php endif; ?>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
                         </div>
-
-                        <button class="carousel-control-prev" type="button"
-                                data-bs-target="#workflowCarousel" data-bs-slide="prev">
-                            <span class="carousel-control-prev-icon"></span>
-                        </button>
-
-                        <button class="carousel-control-next" type="button"
-                                data-bs-target="#workflowCarousel" data-bs-slide="next">
-                            <span class="carousel-control-next-icon"></span>
-                        </button>
                     </div>
+                </div>
+            </div>
 
-                    <?php else: ?>
-                        <div class="text-center small text-muted">
-                            No processed payroll available.
+            <div class="col-12 col-lg-3">
+                <div class="card border-0 shadow-sm rounded-4 mb-4 sticky-top" style="top: 20px;">
+                    <div class="card-header bg-white border-0 py-3">
+                        <h6 class="fw-bold mb-0">Process Overview</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="workflow-vertical">
+                            <?php foreach($steps as $num => $label): ?>
+                                <?php 
+                                    // Logic to determine if a step in the legend is 'completed' or 'active'
+                                    // This assumes you are looking at a specific $row or a general overview
+                                    $is_completed = false; // Set based on your logic if needed
+                                ?>
+                                <div class="step-item">
+                                    <div class="step-dot"></div>
+                                    <div class="step-text small fw-bold"><?= $label ?></div>
+                                </div>
+                            <?php endforeach; ?>
                         </div>
-                    <?php endif; ?>
+                        <div class="alert alert-info border-0 rounded-3 mt-3 py-2 x-small">
+                            <i class="bi bi-info-circle-fill me-1"></i> Completed payrolls are moved to the <strong>History</strong> tab automatically.
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
-
     </div>
 </main>
 
@@ -850,47 +739,35 @@ $(document).ready(function() {
 
 function generateParticulars() {
     const type = document.getElementById('payroll_type').value;
-    const unit = document.querySelector('[name="unit"]').value;
+    const unit = document.querySelector('[name="unit"]').value || 'Specified Units';
     const dateFrom = document.querySelector('[name="date_from"]').value;
     const dateTo = document.querySelector('[name="date_to"]').value;
-    const year = document.getElementById('current_year').value;
+    const year = document.getElementById('current_year').value || 'Current Year';
 
-    let description = '';
+    if (!type) {
+        document.getElementById('particulars_display').value = "Please select a payroll type...";
+        return;
+    }
 
-    // Format date nicely
     function formatDate(dateStr) {
-        if (!dateStr) return '';
+        if (!dateStr) return '...';
         const d = new Date(dateStr);
         return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
     }
 
     const from = formatDate(dateFrom);
     const to = formatDate(dateTo);
+    let description = "";
 
-    // --- RULES ---
-    if (type === 'GENERAL PAYROLL') {
-        description = `General Payroll of ${unit || 'All Units'} for the period ${from} - ${to}`;
-    } 
-    else if (type === 'OVERLOAD') {
-        description = `Overload Compensation of ${unit || 'Personnel'} for the period ${from} - ${to}`;
-    } 
-    else if (type === 'PART-TIME') {
-        description = `Part-Time Salary of ${unit || 'Personnel'} for the period ${from} - ${to}`;
-    } 
-    else if (type === 'DAILY WAGE') {
-        description = `Daily Wage Payroll of ${unit || 'Workers'} for the period ${from} - ${to}`;
-    } 
-    else if (type === 'CONTRACT OF SERVICE') {
-        description = `Contract of Service Payroll of ${unit || 'Personnel'} for the period ${from} - ${to}`;
-    } 
-    else if (type === 'MID-YEAR BONUS') {
-        description = `Mid-Year Bonus for ${unit || 'Personnel'} for CY ${year}`;
-    } 
-    else if (type === 'OJT HONORARIUM') {
-        description = `OJT Honorarium for ${unit || 'Trainees'} for CY ${year}`;
+    switch(type) {
+        case 'MID-YEAR BONUS':
+        case 'OJT HONORARIUM':
+            description = `${type} for ${unit} for CY ${year}`;
+            break;
+        default:
+            description = `${type} of ${unit} for the period ${from} - ${to}`;
     }
 
-    // Set values
     document.getElementById('particulars_display').value = description;
     document.getElementById('particulars').value = description;
 }

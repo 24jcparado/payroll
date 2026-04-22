@@ -34,20 +34,35 @@
     <li class="nav-item px-3 text-uppercase text-white-50 small mt-4">Reports</li>
     <li class="nav-item"><a class="nav-link" href="#"><i class="bi bi-file-earmark-text"></i> Reports</a></li>
 
+     <!-- Remittances -->
+    <!-- Remittances -->
+<li class="nav-item px-3 text-uppercase text-white-50 small mt-4">Remittances</li>
+
+<li class="nav-item">
+    <a class="nav-link" href="<?=base_url('payroll/gsis_remittance_list')?>" target="_blank">
+        <i class="bi bi-bank"></i> GSIS
+    </a>
+</li>
+
+<li class="nav-item">
+    <a class="nav-link" href="<?=base_url('payroll/pagibig_remittance_list')?>">
+        <i class="bi bi-house-door"></i> Pag-IBIG
+    </a>
+</li>
+
+<li class="nav-item">
+    <a class="nav-link" href="<?=base_url('payroll/philhealth-remittance')?>" target="_blank">
+        <i class="bi bi-heart-pulse"></i> PhilHealth
+    </a>
+</li>
+
     <!-- ADMIN -->
     <li class="nav-item px-3 text-uppercase text-white-50 small mt-4">System</li>
     <li class="nav-item">
-        <a class="nav-link d-flex justify-content-between align-items-center"
-        data-bs-toggle="collapse"
-        href="#settingsMenu"
-        role="button"
-        aria-expanded="false"
-        aria-controls="settingsMenu">
-
+        <a class="nav-link d-flex justify-content-between align-items-center" data-bs-toggle="collapse" href="#settingsMenu" role="button" aria-expanded="false" aria-controls="settingsMenu">
             <span><i class="bi bi-gear-fill"></i> Settings</span>
             <i class="bi bi-chevron-down small"></i>
         </a>
-
         <div class="collapse" id="settingsMenu">
             <ul class="nav flex-column ms-3 mt-1">
                 <li class="nav-item">

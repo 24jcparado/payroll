@@ -84,4 +84,17 @@ defined('BASEPATH') OR exit('No direct script access allowed');
             ]);
         }
 
+        public function getEmployeesWithoutGSIS()
+            {
+                $this->db->from('tbl_employee');
+
+                // 👉 ADD IT HERE
+                $this->db->group_start();
+                    $this->db->where('gsis_no IS NULL', null, false);
+                    $this->db->or_where('gsis_no', '');
+                $this->db->group_end();
+
+                return $this->db->get()->result();
+            }
+
     }

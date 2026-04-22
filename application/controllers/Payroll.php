@@ -98,11 +98,6 @@ class Payroll extends MY_Controller {
 		$this->form_validation->set_rules('unit', 'Unit', 'required|trim');
 		$this->form_validation->set_rules('payroll_type', 'Type', 'required');
 
-		// if ($payroll_type !== 'OVERLOAD') {
-		// 	$this->form_validation->set_rules('particulars', 'Particulars', 'required|trim');
-		// 	$this->form_validation->set_rules('date_from', 'Date From', 'required');
-		// 	$this->form_validation->set_rules('date_to', 'Date To', 'required');
-		// }
 
 		if ($this->form_validation->run() == FALSE) {
 			$this->session->set_flashdata('error', validation_errors());
@@ -113,21 +108,12 @@ class Payroll extends MY_Controller {
 		$data = [
 			'payroll_number' => $this->input->post('payroll_number', TRUE),
 			'unit'           => $this->input->post('unit', TRUE),
+			'particulars'           => $this->input->post('particulars', TRUE),
 			'payroll_type'   => $payroll_type,
 			'status'   => 1,
 			'created_at'     => date('Y-m-d H:i:s')
 		];
 
-		// if ($payroll_type !== 'OVERLOAD') {
-		// 	$date_from = $this->input->post('date_from', TRUE);
-		// 	$date_to   = $this->input->post('date_to', TRUE);
-
-		// 	$date_from_fmt = date('d/m/Y', strtotime($date_from));
-		// 	$date_to_fmt   = date('d/m/Y', strtotime($date_to));
-
-		// 	$data['date_period'] = $date_from_fmt . ' - ' . $date_to_fmt;
-		// 	$data['particulars'] = $this->input->post('particulars', TRUE);
-		// }else
 		if($payroll_type == 'OJT HONORARIUM'){
 
 			$data['date_period'] = $this->input->post('current_year', TRUE);
@@ -1594,4 +1580,131 @@ public function get_single_dw()
             ]);
         }
     }
+
+	public function gsis_remittance_list()
+	{
+		$data['period'] = 'GSIS Remittance';
+		$data['payroll'] = $this->Get_model->get_payrolls();
+		$data['all_employees'] = $this->Get_model->get_employees();
+		// $data['employees'] = $this->Get_model->getEmployeesWithoutGSIS();
+		$this->load->view('template/admin_header');
+		$this->load->view('remittances/gsis', $data);
+		$this->load->view('template/admin_footer');
+	}
+
+	public function gsis_remittance($payroll_period_id = null)
+	{
+		if (!$payroll_period_id) {
+			show_404();
+		}
+		$period = $this->Get_model->get_period($payroll_period_id);
+		$data['employees'] = $this->Get_model->get_employees_for_payroll(
+			$period->payroll_period_id,
+			$period->unit
+		);
+		$data['period'] = 'GSIS Remittance';
+		$data['payroll'] = $this->Get_model->get_period($payroll_period_id);
+		$this->load->view('template/admin_header');
+		$this->load->view('remittances/gsis_remittance', $data);
+		$this->load->view('template/admin_footer');
+	}
+
+	public function pagibig_remittance_list()
+	{
+		$data['period'] = 'Pagibig Remittance';
+		$data['payroll'] = $this->Get_model->get_payrolls();
+		$data['all_employees'] = $this->Get_model->get_employees();
+		// $data['employees'] = $this->Get_model->getEmployeesWithoutGSIS();
+		$this->load->view('template/admin_header');
+		$this->load->view('remittances/pagibig', $data);
+		$this->load->view('template/admin_footer');
+	}
+
+	public function pagibig_remittance($payroll_period_id = null)
+	{
+		if (!$payroll_period_id) {
+			show_404();
+		}
+		$period = $this->Get_model->get_period($payroll_period_id);
+		$data['employees'] = $this->Get_model->getPayrollByPeriod($payroll_period_id);
+		$data['period'] = 'GSIS Remittance';
+		$data['payroll'] = $this->Get_model->get_period($payroll_period_id);
+		$this->load->view('template/admin_header');
+		$this->load->view('remittances/pagibig_remittance', $data);
+		$this->load->view('template/admin_footer');
+	}
+
+	public function save_bp_number()
+	{
+		$employee_id = $this->input->post('employee_id');
+		$gsis_no     = $this->input->post('bp_no');
+
+		// Basic validation
+		if (empty($employee_id) || empty($gsis_no)) {
+			echo json_encode([
+				'status' => false,
+				'message' => 'Employee and BP Number are required.'
+			]);
+			return;
+		}
+
+		$this->db->where('gsis_no', $gsis_no);
+		$this->db->where('employee_id !=', $employee_id);
+		$exists = $this->db->get('tbl_employee')->row();
+
+		if ($exists) {
+			echo json_encode([
+				'status' => false,
+				'message' => 'GSIS number already assigned to another employee.'
+			]);
+			return;
+		}
+
+		// UPDATE employee
+		$this->db->where('employee_id', $employee_id);
+		$updated = $this->db->update('tbl_employee', [
+			'gsis_no' => $gsis_no
+		]);
+
+		echo json_encode([
+			'status' => $updated
+		]);
+	}
+
+	public function save_pagibig_number()
+	{
+		$employee_id = $this->input->post('employee_id');
+		$pagibig_no     = $this->input->post('pagibig_no');
+
+		// Basic validation
+		if (empty($employee_id) || empty($pagibig_no)) {
+			echo json_encode([
+				'status' => false,
+				'message' => 'Employee and BP Number are required.'
+			]);
+			return;
+		}
+
+		$this->db->where('pagibig_no', $pagibig_no);
+		$this->db->where('employee_id !=', $employee_id);
+		$exists = $this->db->get('tbl_employee')->row();
+
+		if ($exists) {
+			echo json_encode([
+				'status' => false,
+				'message' => 'GSIS number already assigned to another employee.'
+			]);
+			return;
+		}
+
+		// UPDATE employee
+		$this->db->where('employee_id', $employee_id);
+		$updated = $this->db->update('tbl_employee', [
+			'pagibig_no' => $pagibig_no
+		]);
+
+		echo json_encode([
+			'status' => $updated
+		]);
+	}
 }

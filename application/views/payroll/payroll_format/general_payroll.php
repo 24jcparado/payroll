@@ -310,51 +310,39 @@
                             <!-- ================= PAYROLL SUMMARY ================= -->
                                 <hr>
                             <div class="col-12 mt-4">
-
                                 <div class="section-title section-summary">
                                     Payroll Summary
                                 </div>
-
                                 <div class="row g-3">
-
                                     <div class="col-md-6">
                                         <label class="form-label fw-bold">Total Deductions</label>
                                         <input type="text" id="total_deductions" name="total_deductions"
                                             class="form-control payroll-input readonly-field fw-bold" readonly>
                                     </div>
-
                                     <div class="col-md-6">
                                         <label class="form-label fw-bold text-success">Total Net Pay</label>
                                         <input type="text" id="net_pay" name="net_pay"
                                             class="form-control payroll-input readonly-field fw-bold text-success" readonly>
                                     </div>
-
                                     <div class="col-md-6">
                                         <label class="form-label text-success">1st Quincena</label>
                                         <input type="text" id="net_pay_first" name="net_pay_first"
                                             class="form-control payroll-input readonly-field text-success fw-semibold" readonly>
                                     </div>
-
                                     <div class="col-md-6">
                                         <label class="form-label text-success">2nd Quincena</label>
                                         <input type="text" id="net_pay_second" name="net_pay_second"
                                             class="form-control payroll-input readonly-field text-success fw-semibold" readonly>
                                     </div>
-
                                 </div>
-
                                 <div class="text-end mt-4">
                                     <button type="submit" class="btn btn-primary px-4">
                                         Save Payroll
                                     </button>
                                 </div>
-
                             </div>
-
                         </div>
                     </form>
-
-
                 </div>
             </div>
         </div>
@@ -400,49 +388,6 @@
                         </div>
                     <?php endif; ?>
                     <div class="row g-3 mb-3">
-                        <!-- <div class="card-body">
-
-                            <div class="tracker-legend mb-4">
-                                <span class="legend-item active-legend">Completed</span>
-                                <span class="legend-item current-legend">Current</span>
-                                <span class="legend-item pending-legend">Pending</span>
-                            </div>
-
-                            <div class="payroll-tracker">
-
-                                <div class="tracker-step" id="step-1">
-                                    <div class="tracker-circle">1</div>
-                                    <div>HR</div>
-                                </div>
-
-                                <div class="tracker-step" id="step-2">
-                                    <div class="tracker-circle">2</div>
-                                    <div>Admin Office</div>
-                                </div>
-
-                                <div class="tracker-step" id="step-3">
-                                    <div class="tracker-circle">3</div>
-                                    <div>Budget Office</div>
-                                </div>
-
-                                <div class="tracker-step" id="step-4">
-                                    <div class="tracker-circle">4</div>
-                                    <div>Accounting Office</div>
-                                </div>
-
-                                <div class="tracker-step" id="step-5">
-                                    <div class="tracker-circle">5</div>
-                                    <div>VP for Signing</div>
-                                </div>
-
-                                <div class="tracker-step" id="step-6">
-                                    <div class="tracker-circle">6</div>
-                                    <div>Cashier (Bank Release)</div>
-                                </div>
-
-                            </div>
-
-                        </div> -->
                         <div class="col-12 col-sm-6 col-lg-4">
                             <div class="card border-success shadow-sm h-100">
                                 <div class="card-body py-3 px-3">

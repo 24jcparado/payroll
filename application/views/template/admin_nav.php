@@ -51,7 +51,7 @@
 </li>
 
 <li class="nav-item">
-    <a class="nav-link" href="<?=base_url('payroll/philhealth-remittance')?>" target="_blank">
+    <a class="nav-link" href="<?=base_url('payroll/philhealth_remittance_list')?>" target="_blank">
         <i class="bi bi-heart-pulse"></i> PhilHealth
     </a>
 </li>

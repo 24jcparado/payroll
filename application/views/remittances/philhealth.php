@@ -1,19 +1,21 @@
 <style>
     .x-small { font-size: 0.7rem; }
-    .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 5px; }
     .routing-cell { font-size: 0.65rem; color: #6c757d; line-height: 1.2; vertical-align: middle !important; }
     .routing-cell.completed { color: #198754; font-weight: bold; }
     .routing-cell.pending { color: #f59e0b; font-style: italic; }
     .payrollRow:hover { background-color: rgba(107, 15, 26, 0.03) !important; cursor: pointer; }
     .btn-toggle-active { background-color: #6b0f1a !important; color: white !important; border-color: #6b0f1a !important; }
+    /* Select2 Fix for Bootstrap 5 */
+    .select2-container--default .select2-selection--single { height: 38px; border: 1px solid #dee2e6; border-radius: 0.375rem; }
+    .select2-container--default .select2-selection--single .select2-selection__rendered { line-height: 36px; padding-left: 12px; }
 </style>
 
 <main id="mainContent" class="py-4">
     <div class="container-fluid px-md-4">
         <div class="topbar d-flex justify-content-between align-items-center p-3 bg-white shadow-sm rounded-3 mb-4">
-            <div class="d-flex align-items-ce ter">
+            <div class="d-flex align-items-center">
                 <button class="btn btn-maroon d-lg-none me-2" id="menuToggle"><i class="bi bi-list"></i></button>
-                <h5 class="m-0 fw-bold text-dark">GSIS Remittance & BP Management</h5>
+                <h5 class="m-0 fw-bold text-dark">PhilHealth Remittance & PIN Registry</h5>
             </div>
             <div id="runningClock" class="fw-bold text-muted small d-none d-sm-block"></div>
         </div>
@@ -21,14 +23,15 @@
         <div class="row g-4">
             <div class="col-lg-4">
                 <div class="card border-0 shadow-sm rounded-4 sticky-top" style="top: 20px;">
-                    <div class="card-header bg-primary text-white py-3 border-0">
-                        <h6 class="mb-0 fw-bold"><i class="bi bi-person-badge-fill me-2"></i>BP Number Registry</h6>
+                    <div class="card-header bg-success text-white py-3 border-0">
+                        <h6 class="mb-0 fw-bold"><i class="bi bi-card-checklist me-2"></i>Update PhilHealth ID</h6>
                     </div>
                     <div class="card-body">
-                        <form id="bpForm">
+                        <form id="philhealthForm"> 
                             <input type="hidden" name="payroll_period_id" id="payroll_period_id">
+                            
                             <div class="mb-3">
-                                <label class="form-label x-small fw-bold text-muted">SELECT EMPLOYEE</label>
+                                <label class="form-label x-small fw-bold text-muted text-uppercase">Employee Name</label>
                                 <select name="employee_id" id="employee_id" class="form-select select2" required>
                                     <option value="">-- Search Name --</option>
                                     <?php foreach($all_employees as $e): ?>
@@ -40,16 +43,16 @@
                             </div>
 
                             <div class="mb-4">
-                                <label class="form-label x-small fw-bold text-muted">GSIS BP NUMBER</label>
+                                <label class="form-label x-small fw-bold text-muted text-uppercase">PhilHealth PIN (12-digit)</label>
                                 <div class="input-group shadow-sm">
-                                    <span class="input-group-text bg-white border-end-0 text-muted"><i class="bi bi-hash"></i></span>
-                                    <input type="text" name="bp_no" class="form-control border-start-0 ps-0 fw-bold" placeholder="e.g. 2000123456" required>
+                                    <span class="input-group-text bg-white border-end-0 text-muted"><i class="bi bi-heart-pulse"></i></span>
+                                    <input type="text" name="philhealth_no" class="form-control border-start-0 ps-0 fw-bold" placeholder="00-000000000-0" required>
                                 </div>
-                                <small class="text-muted x-small mt-2 d-block">Ensure the 10-digit BP number is accurate for seamless remittance.</small>
+                                <small class="text-muted x-small mt-2 d-block">The PhilHealth Identification Number (PIN) is required for hospital benefits and monthly premiums.</small>
                             </div>
 
-                            <button type="submit" class="btn btn-success w-100 rounded-pill shadow-sm fw-bold">
-                                <i class="bi bi-check2-circle me-1"></i> Update Registry
+                            <button type="submit" class="btn btn-success w-100 rounded-pill shadow-sm fw-bold py-2">
+                                <i class="bi bi-shield-plus me-1"></i> Update PhilHealth PIN
                             </button>
                         </form>
                     </div>
@@ -59,10 +62,10 @@
             <div class="col-lg-8">
                 <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
                     <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
-                        <h6 class="mb-0 fw-bold text-dark">Records Overview</h6>
+                        <h6 class="mb-0 fw-bold text-dark">Data Overview</h6>
                         <div class="btn-group btn-group-sm p-1 bg-light rounded-pill">
                             <button class="btn rounded-pill px-3 btn-toggle-active" id="btnPayroll">Payrolls</button>
-                            <button class="btn rounded-pill px-3" id="btnEmployees">BP Directory</button>
+                            <button class="btn rounded-pill px-3" id="btnEmployees">PIN Directory</button>
                         </div>
                     </div>
 
@@ -74,7 +77,7 @@
                                         <tr class="text-muted x-small text-uppercase">
                                             <th class="ps-4">Reference</th>
                                             <th>Type / Unit</th>
-                                            <th class="text-center" colspan="6">Routing History (Approval Flow)</th>
+                                            <th class="text-center" colspan="6">Approval Routing</th>
                                         </tr>
                                         <tr class="bg-light-subtle x-small text-center text-muted" style="font-size: 0.6rem;">
                                             <th colspan="2"></th>
@@ -125,8 +128,8 @@
                                     <thead class="bg-light">
                                         <tr class="text-muted x-small text-uppercase">
                                             <th class="ps-4">Employee Name</th>
-                                            <th>Department</th>
-                                            <th>GSIS BP Number</th>
+                                            <th>Unit</th>
+                                            <th>PhilHealth PIN</th>
                                             <th class="text-end pe-4">Action</th>
                                         </tr>
                                     </thead>
@@ -136,16 +139,18 @@
                                             <td class="ps-4 fw-bold"><?= strtoupper($e->last_name . ', ' . $e->name) ?></td>
                                             <td><span class="badge bg-light text-dark border"><?= $e->unit ?></span></td>
                                             <td>
-                                                <?php if($e->gsis_no): ?>
-                                                    <code class="fw-bold fs-6 text-dark"><?= $e->gsis_no ?></code>
+                                                <?php if (isset($e->philhealth_no) && !empty($e->philhealth_no)): ?>
+                                                    <code class="fw-bold fs-6 text-dark"><?= $e->philhealth_no ?></code>
                                                 <?php else: ?>
-                                                    <span class="text-danger x-small fw-bold"><i class="bi bi-exclamation-circle me-1"></i>MISSING</span>
+                                                    <span class="text-danger x-small fw-bold">
+                                                        <i class="bi bi-exclamation-circle me-1"></i>MISSING
+                                                    </span>
                                                 <?php endif; ?>
                                             </td>
                                             <td class="text-end pe-4">
-                                                <button class="btn btn-sm btn-outline-primary editBP rounded-circle"
+                                                <button class="btn btn-sm btn-outline-primary editPIN rounded-circle"
                                                         data-id="<?= $e->employee_id ?>"
-                                                        data-gsis="<?= $e->gsis_no ?>">
+                                                        data-pin="<?= $e->philhealth_no ?? '' ?>">
                                                     <i class="bi bi-pencil-square"></i>
                                                 </button>
                                             </td>
@@ -164,60 +169,58 @@
 
 <script>
 $(document).ready(function(){
-    // Table Initializations
-    const pTable = $('#payrollTable').DataTable({ pageLength: 10, ordering: false, responsive: true });
-    const eTable = $('#employeeTable').DataTable({ pageLength: 10, responsive: true });
+    // Init DataTables
+    $('#payrollTable').DataTable({ ordering: false, responsive: true });
+    $('#employeeTable').DataTable({ responsive: true });
 
-    $('.select2').select2({
+    // Init Select2
+    $('#employee_id').select2({
         placeholder: "Find employee...",
-        allowClear: true,
         width: '100%'
     });
 
-    // View Switching Logic
+    // Navigation Switches
     $('#btnPayroll').click(function(){
-        $('#payrollView').fadeIn();
+        $('#payrollView').fadeIn(200);
         $('#employeeView').hide();
-        $(this).addClass('btn-toggle-active');
-        $('#btnEmployees').removeClass('btn-toggle-active');
+        $(this).addClass('btn-toggle-active').siblings().removeClass('btn-toggle-active');
     });
 
     $('#btnEmployees').click(function(){
         $('#payrollView').hide();
-        $('#employeeView').fadeIn();
-        $(this).addClass('btn-toggle-active');
-        $('#btnPayroll').removeClass('btn-toggle-active');
+        $('#employeeView').fadeIn(200);
+        $(this).addClass('btn-toggle-active').siblings().removeClass('btn-toggle-active');
     });
 
-    // Payroll Row Click
+    // Row Redirection
     $(document).on('click', '.payrollRow', function(){
-        window.location.href = "<?= base_url('payroll/gsis_remittance/') ?>" + $(this).data('id');
+        window.location.href = "<?= base_url('payroll/philhealth_remittance/') ?>" + $(this).data('id');
     });
 
-    // Edit BP Functionality
-    $(document).on('click', '.editBP', function(){
+    // Auto-fill form for editing
+    $(document).on('click', '.editPIN', function(){
         const id = $(this).data('id');
-        const gsis = $(this).data('gsis');
+        const pin = $(this).data('pin');
 
         $('#employee_id').val(id).trigger('change');
-        $('input[name="bp_no"]').val(gsis).focus();
+        $('input[name="philhealth_no"]').val(pin).focus();
 
         $('html, body').animate({ scrollTop: 0 }, 300);
     });
 
-    // Ajax Submission
-    $('#bpForm').submit(function(e){
+    // AJAX Form Submit
+    $('#philhealthForm').submit(function(e){
         e.preventDefault();
         const btn = $(this).find('button[type="submit"]');
         btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span> Saving...');
 
-        $.post("<?= base_url('payroll/save_bp_number') ?>", $(this).serialize(), function(res){
+        $.post("<?= base_url('payroll/save_philhealth_number') ?>", $(this).serialize(), function(res){
             if(res.status){
-                Swal.fire({ icon: 'success', title: 'Success', text: 'GSIS registry updated!', timer: 1500, showConfirmButton: false })
+                Swal.fire({ icon: 'success', title: 'Record Updated', text: 'PhilHealth PIN successfully saved', timer: 1500, showConfirmButton: false })
                 .then(() => location.reload());
             } else {
-                Swal.fire('Error', res.message || 'Operation failed', 'error');
-                btn.prop('disabled', false).html('<i class="bi bi-save"></i> Save BP Number');
+                Swal.fire('Error', res.message || 'Update failed', 'error');
+                btn.prop('disabled', false).html('<i class="bi bi-shield-plus me-1"></i> Update PhilHealth PIN');
             }
         }, 'json');
     });

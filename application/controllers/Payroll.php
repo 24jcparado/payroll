@@ -1634,6 +1634,38 @@ public function get_single_dw()
 		$this->load->view('template/admin_footer');
 	}
 
+	public function philhealth_remittance_list()
+	{
+		$data['period'] = 'PhilHealth Remittance';
+		$data['payroll'] = $this->Get_model->get_payrolls();
+		$data['all_employees'] = $this->Get_model->get_employees();
+		
+		$this->load->view('template/admin_header');
+		// Ensure you create this view file: views/remittances/philhealth.php
+		$this->load->view('remittances/philhealth', $data); 
+		$this->load->view('template/admin_footer');
+	}
+
+	public function philhealth_remittance($payroll_period_id = null)
+	{
+		if (!$payroll_period_id) {
+			show_404();
+		}
+		
+		// Fetch specific payroll period details
+		$payroll_data = $this->Get_model->get_period($payroll_period_id);
+		
+		$data['period'] = 'PhilHealth Remittance Details';
+		$data['payroll'] = $payroll_data;
+		// Fetches employees linked to this specific payroll run
+		$data['employees'] = $this->Get_model->getPayrollByPeriod($payroll_period_id);
+		
+		$this->load->view('template/admin_header');
+		// Ensure you create this view file: views/remittances/philhealth_remittance.php
+		$this->load->view('remittances/philhealth_remittance', $data);
+		$this->load->view('template/admin_footer');
+	}
+
 	public function save_bp_number()
 	{
 		$employee_id = $this->input->post('employee_id');
@@ -1706,5 +1738,53 @@ public function get_single_dw()
 		echo json_encode([
 			'status' => $updated
 		]);
+	}
+
+	public function save_philhealth_number()
+	{
+		$employee_id   = $this->input->post('employee_id');
+		$philhealth_no = $this->input->post('philhealth_no');
+
+		// 1. Basic validation
+		if (empty($employee_id) || empty($philhealth_no)) {
+			echo json_encode([
+				'status' => false,
+				'message' => 'Employee and PhilHealth PIN are required.'
+			]);
+			return;
+		}
+
+		// 2. Check for Duplicates
+		// Ensure this PhilHealth number isn't already used by someone else
+		$this->db->where('philhealth_no', $philhealth_no);
+		$this->db->where('employee_id !=', $employee_id);
+		$exists = $this->db->get('tbl_employee')->row();
+
+		if ($exists) {
+			echo json_encode([
+				'status' => false,
+				'message' => 'This PhilHealth number is already assigned to another employee.'
+			]);
+			return;
+		}
+
+		// 3. Update Registry
+		$this->db->where('employee_id', $employee_id);
+		$updated = $this->db->update('tbl_employee', [
+			'philhealth_no' => $philhealth_no
+		]);
+
+		// 4. Return Response
+		if ($updated) {
+			echo json_encode([
+				'status' => true,
+				'message' => 'PhilHealth PIN successfully updated.'
+			]);
+		} else {
+			echo json_encode([
+				'status' => false,
+				'message' => 'Database error: Unable to update record.'
+			]);
+		}
 	}
 }

@@ -105,12 +105,18 @@ class Payroll extends MY_Controller {
 			return;
 		}
 
+		$date_from = $this->input->post('date_from', TRUE); // Expected input format: YYYY-MM-DD
+		$date_to   = $this->input->post('date_to', TRUE);
+		$start = date('m/d/Y', strtotime($date_from));
+		$end   = date('m/d/Y', strtotime($date_to));
+		$formatted_period = $start . ' - ' . $end;
 		$data = [
 			'payroll_number' => $this->input->post('payroll_number', TRUE),
 			'unit'           => $this->input->post('unit', TRUE),
-			'particulars'           => $this->input->post('particulars', TRUE),
+			'particulars'    => $this->input->post('particulars', TRUE),
+			'date_period'    => $formatted_period, // The new combined column
 			'payroll_type'   => $payroll_type,
-			'status'   => 1,
+			'status'         => 1,
 			'created_at'     => date('Y-m-d H:i:s')
 		];
 
@@ -188,6 +194,7 @@ class Payroll extends MY_Controller {
 			'payroll_number'  => $period->payroll_number,
 			'unit'            => $period->unit,
 			'token_id'        => $period->token_id,
+			'qr_code'         => $period->qr_code,
 			'payroll_type'    => $period->payroll_type,
 			'period_id'       => $period->payroll_period_id,
 			'status'          => $period->status
@@ -269,6 +276,7 @@ class Payroll extends MY_Controller {
 			'payroll_number'  => $period->payroll_number,
 			'unit'            => $period->unit,
 			'token_id'        => $period->token_id,
+			'qr_code'        => $period->qr_code,
 			'payroll_type'    => $period->payroll_type,
 			'period_id'       => $period->payroll_period_id,
 			'status'          => $period->status
@@ -279,6 +287,63 @@ class Payroll extends MY_Controller {
 		$this->load->view('payroll/payroll_format/mid_year', $data);
 		$this->load->view('template/admin_footer');
 	}
+
+	public function export_pdf_mid($period_id) 
+		{
+			$this->load->library('pdf');
+    
+			$period  = $this->Get_model->get_period($period_id);
+			$payroll = $this->Get_model->getPayrollByPeriodMY($period_id);
+
+			if (empty($payroll)) {
+				$this->session->set_flashdata('error', 'No records found.');
+				redirect($_SERVER['HTTP_REFERER']);
+			}
+
+			$allColumns = [];
+
+			// 2. Process the rows
+			foreach ($payroll as &$row) {
+				// --- THE FIX ---
+				// If $row is an array, cast it to an object so $row->basic_salary works
+				if (is_array($row)) {
+					$row = (object)$row; 
+				}
+
+				$row->parsed_deductions = []; 
+				
+				// Use your database attribute 'less'
+				if (!empty($row->less)) { 
+					$items = explode(',', $row->less);
+					foreach ($items as $item) {
+						$parts = explode(':', trim($item));
+						if (count($parts) == 2) {
+							$name   = trim($parts[0]);
+							$amount = (float) trim($parts[1]);
+							$row->parsed_deductions[$name] = $amount;
+							
+							// Collect unique loan names for headers
+							$allColumns[$name] = $name;
+						}
+					}
+				}
+			}
+
+			// 3. Prepare data for the View
+			$data = [
+				'period'       => $period,
+				'payroll'      => $payroll, 
+				'otherColumns' => array_values($allColumns)
+			];
+
+			// 4. Generate PDF
+			$html = $this->load->view('payroll/layout/midyear_payroll_pdf', $data, true);
+			$this->pdf->loadHtml($html);
+			$this->pdf->setPaper([0, 0, 612, 936], 'landscape'); // Long Bond Landscape
+			$this->pdf->render();
+			
+			$this->pdf->stream("MIDYEAR_BONUS_PAYROLL.pdf", ['Attachment' => 1]);
+		}
 
 	public function run_ojt_honorarium($period_id)
 	{
@@ -391,9 +456,12 @@ class Payroll extends MY_Controller {
 	{
 		$this->load->library('form_validation');
 		$this->form_validation->set_rules('deduction_name', 'Name of Deduction', 'required|trim');
-		$this->form_validation->set_rules('deduction_type', 'Deduction Type', 'required|in_list[Loan,Other]');
+		// Added 'Contribution' to in_list because it's an option in your HTML
+		$this->form_validation->set_rules('deduction_type', 'Deduction Type', 'required|in_list[Contribution,Loan,Other]');
 		$this->form_validation->set_rules('is_mandatory', 'Mandatory', 'required|in_list[0,1]');
-		$this->form_validation->set_rules('is_active', 'Active', 'required|in_list[0,1]');
+		
+		// REMOVE or make 'is_active' optional since it's not in the form
+		// Or just default it to 1 in the $data array
 
 		if ($this->form_validation->run() == FALSE) {
 			$this->session->set_flashdata('error', validation_errors());
@@ -404,7 +472,7 @@ class Payroll extends MY_Controller {
 				'deduction_type' => $this->input->post('deduction_type', TRUE),
 				'applicable'     => $this->input->post('applicable', TRUE),
 				'is_mandatory'   => $this->input->post('is_mandatory', TRUE),
-				'is_active'      => $this->input->post('is_active', TRUE),
+				'is_active'      => 1, // Force active by default
 				'created_at'     => date('Y-m-d H:i:s')
 			];
 
@@ -677,21 +745,14 @@ class Payroll extends MY_Controller {
 
 		// 🔥 PARSE deductions
 		foreach ($payroll as $row) {
-
 			$row->parsed_deductions = [];
-
 			if (!empty($row->other_deductions)) {
-
 				$items = explode(',', $row->other_deductions);
-
 				foreach ($items as $item) {
-
 					$parts = explode(':', trim($item));
-
 					if (count($parts) == 2) {
 						$name   = trim($parts[0]);
 						$amount = (float) trim($parts[1]);
-
 						$row->parsed_deductions[$name] = $amount;
 
 						// collect all unique deduction names
@@ -720,6 +781,26 @@ class Payroll extends MY_Controller {
 			"GENERAL_PAYROLL_{$period->date_period}.pdf",
 			['Attachment' => true]
 		);
+	}
+
+	// 2. Download Transmittal
+	public function export_transmittal_pdf_mid($period_id) {
+		$data['summary'] = $this->Get_model->get_midyear_summary($period_id);
+		$html = $this->load->view('payroll/reports/transmittal_pdf', $data, true);
+		
+		$this->pdf_library->generate($html, 'Transmittal_'.$period_id.'.pdf');
+	}
+
+	// 3. Generate Payslips (AJAX call)
+	public function generate_payslips_mid($period_id) {
+		// Logic to flag payslips as generated or pre-calculate values
+		$success = $this->Update_model->set_payslips_ready($period_id);
+		
+		if($success) {
+			echo json_encode(['status' => 'success', 'message' => 'Payslips have been generated successfully.']);
+		} else {
+			echo json_encode(['status' => 'error', 'message' => 'Failed to generate payslips.']);
+		}
 	}
 
 	public function export_pdf_dw($period_id)
@@ -1361,48 +1442,63 @@ public function get_single_dw()
 	}
 
 	public function save_midyear_payroll() {
+    // 1. Capture and Clean Inputs
 		$employee_id = $this->input->post('employee_id');
 		$payroll_period_id = $this->input->post('payroll_period_id');
-		$basic_salary = $this->input->post('basic_salary');
-		$gross_pay = $this->input->post('gross_pay');
-		$tax = $this->input->post('tax');
-		$total_deductions = $this->input->post('total_deductions');
-		$net_pay = $this->input->post('net_pay');
+		
+		// Convert to float to avoid DB "Incorrect decimal value" errors
+		$basic_salary = floatval(str_replace(',', '', $this->input->post('basic_salary')));
+		$gross_pay = floatval(str_replace(',', '', $this->input->post('gross_pay')));
+		$tax = floatval(str_replace(',', '', $this->input->post('tax')));
+		$total_deductions = floatval(str_replace(',', '', $this->input->post('total_deductions')));
+		$net_pay = floatval(str_replace(',', '', $this->input->post('net_pay')));
 
+		// 2. Process Loans (String concatenation for the 'less' column)
 		$loans = $this->input->post('loans');
 		$deductions_str = '';
-		if(!empty($loans)){
+		if(!empty($loans) && is_array($loans)){
 			$tmp = [];
 			foreach($loans as $loan){
-				$tmp[] = $loan['name'] . ':' . floatval($loan['amount']);
+				$l_name = $loan['name'] ?? 'Loan';
+				$l_amount = floatval($loan['amount'] ?? 0);
+				if($l_amount > 0) {
+					$tmp[] = $l_name . ':' . $l_amount;
+				}
 			}
 			$deductions_str = implode(', ', $tmp);
 		}
-		$employee_details = $this->Get_model->getEmployeeName($employee_id);
-		$name = $employee_details->last_name . ', ' .
-        $employee_details->name .
-        (!empty($employee_details->middle_name) ? ' ' . strtoupper(substr($employee_details->middle_name,0,1)) . '.' : '') .
-        (!empty($employee_details->ext) ? ' ' . $employee_details->ext : '');
 
+		// 3. Fetch Employee Details for the snapshot
+		$employee_details = $this->Get_model->getEmployeeName($employee_id);
+		if(!$employee_details) {
+			echo json_encode(['status'=>'error', 'message'=>'Employee not found']);
+			return;
+		}
+
+		$name = $employee_details->last_name . ', ' . $employee_details->name;
 		$position = $employee_details->position ?? 'N/A';
 
+		// 4. Map to your EXACT database columns
 		$data = [
-			'employee_id' => $employee_id,
-			'name' => $name,
-			'position' => $position,
+			'employee_id'       => $employee_id,
 			'payroll_period_id' => $payroll_period_id,
-			'basic_salary' => $basic_salary,
-			'gross_pay' => $gross_pay,
-			'total_deductions' => $total_deductions,
-			'net_pay' => $net_pay,
-			'tax' => $tax,
-			'less' => $deductions_str, // single column
-			'created_at' => date('Y-m-d H:i:s')
+			'name'              => $name,
+			'position'          => $position,
+			'basic_salary'      => $basic_salary,
+			'gross_pay'         => $gross_pay,
+			'total_deductions'  => $total_deductions,
+			'less'              => $deductions_str, 
+			'tax'               => $tax,
+			'net_pay'           => $net_pay,
+			'created_at'        => date('Y-m-d H:i:s')
 		];
 
-		$this->Insert_model->insert('tbl_py_midyear_bonus', $data);
-
-		echo json_encode(['status'=>'success']);
+		// 5. Execution
+		if($this->Insert_model->insert('tbl_py_midyear_bonus', $data)) {
+			echo json_encode(['status'=>'success']);
+		} else {
+			echo json_encode(['status'=>'error', 'message'=>'Database Insert Failed']);
+		}
 	}
 	public function get_saved_midyear($period_id)
 	{

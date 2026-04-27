@@ -299,34 +299,31 @@ $current_month = date('m');
                             <label class="form-label">Payroll Period</label>
                             <div class="row g-2">
                                 <div class="col-md-6">
-                                    <input type="date" class="form-control" name="date_from">
+                                    <input type="date" class="form-control" name="date_from" id="date_from" required>
                                     <small class="text-muted">From</small>
                                 </div>
                                 <div class="col-md-6">
-                                    <input type="date" class="form-control" name="date_to">
+                                    <input type="date" class="form-control" name="date_to" id="date_to" required>
                                     <small class="text-muted">To</small>
                                 </div>
                             </div>
                         </div>
                     </div>
-                    <div id="currentYear">
-                        <div class="row g-3">
-                            <div class="col-md-12">
-                                <label class="form-label fw-semibold">Current Year</label>
 
-                                <div class="input-group">
-                                    <select id="current_year" name="current_year" 
-                                        class="form-select payroll-input" required>
-                                        <option value="">-- Select Current Year --</option>
-                                    </select>
-
-                                    <button type="button" 
-                                        class="btn btn-outline-primary" 
-                                        data-bs-toggle="modal" 
-                                        data-bs-target="#YearModal">
-                                        <i class="bi bi-plus-lg"></i>
-                                    </button>
-                                </div>
+                    <div id="currentYear" style="display:none;">
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Current Year</label>
+                            <div class="input-group">
+                                <span class="input-group-text" id="yearLabel">Year:</span>
+                                <select id="current_year" name="current_year" class="form-select">
+                                    <option value="">-- Select Year --</option>
+                                    <?php for($y=date('Y'); $y>=2020; $y--): ?>
+                                        <option value="<?= $y ?>"><?= $y ?></option>
+                                    <?php endfor; ?>
+                                </select>
+                                <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#YearModal">
+                                    <i class="bi bi-plus-lg"></i>
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -611,26 +608,28 @@ document.addEventListener('DOMContentLoaded', function () {
     // FIELD TOGGLING (CORE LOGIC)
     // =============================
     function togglePayrollFields(type) {
+    // Check for both special types that use the Year instead of Date Range
+    if (type === 'OJT HONORARIUM' || type === 'MID-YEAR BONUS') {
 
-        if (type === 'OJT HONORARIUM') {
+        regularFields.style.display = 'none';
+        currentYear.style.display = 'block';
 
-            regularFields.style.display = 'none';
-            currentYear.style.display = 'block';
+        // Disable date requirements so hidden fields don't block submission
+        dateFrom.required = false;
+        dateTo.required = false;
+        yearField.required = true;
 
-            dateFrom.required = false;
-            dateTo.required = false;
-            yearField.required = true;
+    } else {
 
-        } else {
+        regularFields.style.display = 'block';
+        currentYear.style.display = 'none';
 
-            regularFields.style.display = 'block';
-            currentYear.style.display = 'none';
-
-            dateFrom.required = true;
-            dateTo.required = true;
-            yearField.required = false;
-        }
+        // Enable date requirements for standard payrolls
+        dateFrom.required = true;
+        dateTo.required = true;
+        yearField.required = false;
     }
+}
 
     // =============================
     // DROPDOWN CHANGE EVENT

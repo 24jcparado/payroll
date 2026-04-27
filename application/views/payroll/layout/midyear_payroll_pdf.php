@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>General Payroll - EVSU</title>
+    <title>Mid-Year Bonus Payroll - EVSU</title>
     <style>
         @page {
             size: A4 landscape;
@@ -25,7 +25,6 @@
         .header-section h2 { font-size: 16px; margin: 0; text-transform: uppercase; }
         .header-section h3 { font-size: 13px; margin: 2px 0; }
         
-        /* QR Code Positioning */
         .qr-container {
             position: absolute;
             right: 0;
@@ -51,7 +50,7 @@
         }
         th, td {
             border: 1px solid #000;
-            padding: 3px 2px;
+            padding: 4px 3px;
             word-wrap: break-word;
         }
         th {
@@ -61,7 +60,7 @@
             vertical-align: middle;
             text-align: center;
         }
-        td { font-size: 8.5px; vertical-align: middle; }
+        td { font-size: 9px; vertical-align: middle; }
         
         .text-right { text-align: right; }
         .text-center { text-align: center; }
@@ -77,7 +76,6 @@
         .page-break { page-break-after: always; }
     </style>
 </head>
-
 <body>
 
 <?php
@@ -88,9 +86,11 @@ $totalPages = count($chunks);
 
 // Initialize Grand Totals
 $grand = [
-    'basic_salary'=>0, 'pera'=>0, 'gross_pay'=>0, 'lwop'=>0, 'tax'=>0,
-    'gsis'=>0, 'philhealth'=>0, 'pagibig'=>0, 'total_deductions'=>0,
-    'net_pay'=>0, 'first'=>0, 'second'=>0
+    'basic_salary' => 0, 
+    'gross_pay' => 0, 
+    'tax' => 0, 
+    'total_deductions' => 0, 
+    'net_pay' => 0
 ];
 $grandOther = array_fill_keys($otherColumns, 0);
 $rowNo = 1;
@@ -105,22 +105,22 @@ foreach ($chunks as $pageIdx => $pageRows):
 
 <div class="header-section">
     <div class="qr-container">
-        <img src="<?= base_url($period->qr_code) ?>" class="qr-code-img">
+        <img src="<?=base_url($period->qr_code)?>" class="qr-code-img">
         <div style="font-size: 7px; font-family: monospace;"><?= $period->token_id ?></div>
     </div>
     <h3>Republic of the Philippines</h3>
     <h2>Eastern Visayas State University</h2>
     <div style="font-size: 10px;">Tacloban City</div>
-    <h2 style="margin-top: 8px; border-top: 1px solid #eee; padding-top: 5px;">General Payroll</h2>
+    <h2 style="margin-top: 8px; border-top: 1px solid #eee; padding-top: 5px;">Mid-Year Bonus Payroll</h2>
 </div>
 
 <div class="info-row">
     <div class="period-box">
-        Payroll Period: <span class="fw-bold"><?= strtoupper($period->date_period) ?></span><br>
+        Calendar Year: <span class="fw-bold"><?= date('Y', strtotime($period->date_period)) ?></span><br>
         Fund Source: <span class="fw-bold"><?= $period->payroll_type ?></span>
     </div>
     <div class="notice-box">
-        "We acknowledge receipt of the sum shown opposite our names as full compensation for services rendered."
+        "We acknowledge receipt of the Mid-Year Bonus shown opposite our names as full compensation for services rendered."
     </div>
     <div class="clearfix"></div>
 </div>
@@ -128,20 +128,17 @@ foreach ($chunks as $pageIdx => $pageRows):
 <table>
     <thead>
         <tr>
-            <th width="20" rowspan="2">No.</th>
-            <th width="110" rowspan="2">Name</th>
-            <th width="80" rowspan="2">Position</th>
-            <th width="55" rowspan="2">Basic<br>Salary</th>
-            <th width="45" rowspan="2">ACA<br>PERA</th>
-            <th width="55" rowspan="2">Gross<br>Pay</th>
-            <th colspan="<?= 5 + count($otherColumns) ?>">Deductions</th>
-            <th width="55" rowspan="2">Total<br>Deductions</th>
-            <th width="55" rowspan="2">Net Pay</th>
-            <th width="50" rowspan="2">1st<br>Quin</th>
-            <th width="50" rowspan="2">2nd<br>Quin</th>
+            <th width="30" rowspan="2">No.</th>
+            <th width="150" rowspan="2">Name</th>
+            <th width="100" rowspan="2">Position</th>
+            <th width="80" rowspan="2">Monthly Basic<br>Salary</th>
+            <th width="80" rowspan="2">Gross Mid-Year<br>Bonus</th>
+            <th colspan="<?= 1 + count($otherColumns) ?>">Deductions</th>
+            <th width="80" rowspan="2">Total<br>Deductions</th>
+            <th width="90" rowspan="2">Net Bonus<br>Amount</th>
         </tr>
         <tr>
-            <th>LWOP</th><th>W/Tax</th><th>GSIS</th><th>PhilH</th><th>P-Ibig</th>
+            <th width="60">W/Tax</th>
             <?php foreach($otherColumns as $col): ?>
                 <th><?= htmlspecialchars($col) ?></th>
             <?php endforeach; ?>
@@ -150,84 +147,61 @@ foreach ($chunks as $pageIdx => $pageRows):
     <tbody>
         <?php foreach ($pageRows as $row): 
             // Add to Page Subtotal
-            $pt['basic_salary'] += $row->basic_salary; $pt['pera'] += $row->pera;
-            $pt['gross_pay'] += $row->gross_pay; $pt['lwop'] += $row->lwop_amount;
-            $pt['tax'] += $row->tax; $pt['gsis'] += $row->gsis;
-            $pt['philhealth'] += $row->philhealth; $pt['pagibig'] += $row->pagibig;
-            $pt['total_deductions'] += $row->total_deductions; $pt['net_pay'] += $row->net_pay;
-            $pt['first'] += $row->net_pay_first; $pt['second'] += $row->net_pay_second;
+            $pt['basic_salary'] += $row->basic_salary;
+            $pt['gross_pay'] += $row->gross_pay;
+            $pt['tax'] += $row->tax;
+            $pt['total_deductions'] += $row->total_deductions;
+            $pt['net_pay'] += $row->net_pay;
 
             // Add to Grand Total
-            $grand['basic_salary'] += $row->basic_salary; $grand['pera'] += $row->pera;
-            $grand['gross_pay'] += $row->gross_pay; $grand['lwop'] += $row->lwop_amount;
-            $grand['tax'] += $row->tax; $grand['gsis'] += $row->gsis;
-            $grand['philhealth'] += $row->philhealth; $grand['pagibig'] += $row->pagibig;
-            $grand['total_deductions'] += $row->total_deductions; $grand['net_pay'] += $row->net_pay;
-            $grand['first'] += $row->net_pay_first; $grand['second'] += $row->net_pay_second;
+            $grand['basic_salary'] += $row->basic_salary;
+            $grand['gross_pay'] += $row->gross_pay;
+            $grand['tax'] += $row->tax;
+            $grand['total_deductions'] += $row->total_deductions;
+            $grand['net_pay'] += $row->net_pay;
         ?>
         <tr>
             <td class="text-center"><?= $rowNo++ ?></td>
             <td class="fw-bold"><?= htmlspecialchars($row->name) ?></td>
             <td><?= htmlspecialchars($row->position) ?></td>
-            <td class="text-right"><?= number_format($row->basic_salary,2) ?></td>
-            <td class="text-right"><?= number_format($row->pera,2) ?></td>
-            <td class="text-right fw-bold"><?= number_format($row->gross_pay,2) ?></td>
-            <td class="text-right"><?= number_format($row->lwop_amount,2) ?></td>
-            <td class="text-right"><?= number_format($row->tax,2) ?></td>
-            <td class="text-right"><?= number_format($row->gsis,2) ?></td>
-            <td class="text-right"><?= number_format($row->philhealth,2) ?></td>
-            <td class="text-right"><?= number_format($row->pagibig,2) ?></td>
+            <td class="text-right"><?= number_format($row->basic_salary, 2) ?></td>
+            <td class="text-right fw-bold"><?= number_format($row->gross_pay, 2) ?></td>
+            <td class="text-right"><?= number_format($row->tax, 2) ?></td>
             <?php foreach($otherColumns as $col): 
                 $val = $row->parsed_deductions[$col] ?? 0;
                 $ptOther[$col] += $val;
                 $grandOther[$col] += $val;
             ?>
-                <td class="text-right"><?= number_format($val,2) ?></td>
+                <td class="text-right"><?= number_format($val, 2) ?></td>
             <?php endforeach; ?>
-            <td class="text-right fw-bold"><?= number_format($row->total_deductions,2) ?></td>
-            <td class="text-right fw-bold"><?= number_format($row->net_pay,2) ?></td>
-            <td class="text-right"><?= number_format($row->net_pay_first,2) ?></td>
-            <td class="text-right"><?= number_format($row->net_pay_second,2) ?></td>
+            <td class="text-right fw-bold"><?= number_format($row->total_deductions, 2) ?></td>
+            <td class="text-right fw-bold" style="background-color: #fcfcfc;">₱ <?= number_format($row->net_pay, 2) ?></td>
         </tr>
         <?php endforeach; ?>
 
         <tr class="subtotal-row">
             <td colspan="3" class="text-center">PAGE SUBTOTAL (Page <?= $pageNo ?> of <?= $totalPages ?>)</td>
-            <td class="text-right"><?= number_format($pt['basic_salary'],2) ?></td>
-            <td class="text-right"><?= number_format($pt['pera'],2) ?></td>
-            <td class="text-right"><?= number_format($pt['gross_pay'],2) ?></td>
-            <td class="text-right"><?= number_format($pt['lwop'],2) ?></td>
-            <td class="text-right"><?= number_format($pt['tax'],2) ?></td>
-            <td class="text-right"><?= number_format($pt['gsis'],2) ?></td>
-            <td class="text-right"><?= number_format($pt['philhealth'],2) ?></td>
-            <td class="text-right"><?= number_format($pt['pagibig'],2) ?></td>
+            <td class="text-right"><?= number_format($pt['basic_salary'], 2) ?></td>
+            <td class="text-right"><?= number_format($pt['gross_pay'], 2) ?></td>
+            <td class="text-right"><?= number_format($pt['tax'], 2) ?></td>
             <?php foreach($otherColumns as $col): ?>
-                <td class="text-right"><?= number_format($ptOther[$col],2) ?></td>
+                <td class="text-right"><?= number_format($ptOther[$col], 2) ?></td>
             <?php endforeach; ?>
-            <td class="text-right"><?= number_format($pt['total_deductions'],2) ?></td>
-            <td class="text-right"><?= number_format($pt['net_pay'],2) ?></td>
-            <td class="text-right"><?= number_format($pt['first'],2) ?></td>
-            <td class="text-right"><?= number_format($pt['second'],2) ?></td>
+            <td class="text-right"><?= number_format($pt['total_deductions'], 2) ?></td>
+            <td class="text-right">₱ <?= number_format($pt['net_pay'], 2) ?></td>
         </tr>
 
         <?php if ($pageNo == $totalPages): ?>
         <tr class="grand-total-row">
             <td colspan="3" class="text-center">GRAND TOTAL</td>
-            <td class="text-right"><?= number_format($grand['basic_salary'],2) ?></td>
-            <td class="text-right"><?= number_format($grand['pera'],2) ?></td>
-            <td class="text-right"><?= number_format($grand['gross_pay'],2) ?></td>
-            <td class="text-right"><?= number_format($grand['lwop'],2) ?></td>
-            <td class="text-right"><?= number_format($grand['tax'],2) ?></td>
-            <td class="text-right"><?= number_format($grand['gsis'],2) ?></td>
-            <td class="text-right"><?= number_format($grand['philhealth'],2) ?></td>
-            <td class="text-right"><?= number_format($grand['pagibig'],2) ?></td>
+            <td class="text-right"><?= number_format($grand['basic_salary'], 2) ?></td>
+            <td class="text-right"><?= number_format($grand['gross_pay'], 2) ?></td>
+            <td class="text-right"><?= number_format($grand['tax'], 2) ?></td>
             <?php foreach($otherColumns as $col): ?>
-                <td class="text-right"><?= number_format($grandOther[$col],2) ?></td>
+                <td class="text-right"><?= number_format($grandOther[$col], 2) ?></td>
             <?php endforeach; ?>
-            <td class="text-right"><?= number_format($grand['total_deductions'],2) ?></td>
-            <td class="text-right"><?= number_format($grand['net_pay'],2) ?></td>
-            <td class="text-right"><?= number_format($grand['first'],2) ?></td>
-            <td class="text-right"><?= number_format($grand['second'],2) ?></td>
+            <td class="text-right"><?= number_format($grand['total_deductions'], 2) ?></td>
+            <td class="text-right">₱ <?= number_format($grand['net_pay'], 2) ?></td>
         </tr>
         <?php endif; ?>
     </tbody>

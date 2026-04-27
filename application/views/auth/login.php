@@ -249,6 +249,8 @@
                 <p class="text-muted small">Authorization required for disbursement access.</p>
             </div>
             <form method="post" action="<?= base_url('welcome/receiver_login') ?>">
+                <input type="hidden" name="receiver_token" value="<?= $receiver_token ?>">
+
                 <div class="mb-3">
                     <label class="form-label">Receiver ID</label>
                     <input type="text" name="username" class="form-control" placeholder="Enter Username" required>

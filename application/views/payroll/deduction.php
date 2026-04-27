@@ -1,4 +1,7 @@
 <style>
+    .bg-maroon { background-color: #6b0f1a; color: white; }
+    .btn-maroon { background-color: #6b0f1a; color: white; }
+    .btn-maroon:hover { background-color: #4a0a0b; color: white; }
     .x-small { font-size: 0.75rem; }
     .card-header-custom { background-color: #6b0f1a; color: white; }
     .badge-mandatory { background-color: #dc3545; color: white; font-weight: 600; }
@@ -29,7 +32,7 @@
                     <div class="card-header card-header-custom py-3">
                         <h6 class="mb-0 fw-bold"><i class="bi bi-shield-lock-fill me-2"></i>Institutional & Mandatory Deductions</h6>
                     </div>
-                    <div class="card-body p-0">
+                    <div class="card-body">
                         <div class="table-responsive">
                             <table class="table table-hover align-middle mb-0 small">
                                 <thead class="table-light">
@@ -67,7 +70,7 @@
                     <div class="card-header bg-white py-3 border-bottom">
                         <h6 class="mb-0 fw-bold text-dark"><i class="bi bi-collection-fill me-2 text-primary"></i>Other / Optional Deductions</h6>
                     </div>
-                    <div class="card-body p-0">
+                    <div class="card-body">
                         <div class="table-responsive">
                             <table id="otherTable" class="table table-hover align-middle mb-0 small">
                                 <thead class="table-light">
@@ -144,7 +147,7 @@
 
 <div class="modal fade" id="addFundModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <form action="<?= base_url('payroll/add_deduction') ?>" method="POST" class="w-100">
+        <form action="<?php echo base_url('payroll/add_deduction'); ?>" method="POST" class="w-100">
             <div class="modal-content border-0 shadow-lg">
                 <div class="modal-header bg-maroon text-white border-0">
                     <h6 class="modal-title fw-bold"><i class="bi bi-plus-circle me-2"></i>Configure Deduction</h6>

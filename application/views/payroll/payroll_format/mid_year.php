@@ -1,510 +1,255 @@
 <style>
-    #savedPayrollTable th,
-    #savedPayrollTable td {
-        white-space: normal !important;
-        word-break: break-word;
-        font-size: 0.85rem;
-        padding: 0.35rem 0.5rem;
+    :root {
+        --maroon: #6b0f1a;
+        --success-soft: #ecfdf5;
+        --danger-soft: #fef2f2;
     }
 
-    .section-title {
-        font-size: 13px;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: .5px;
-        padding: 10px 15px;
-        margin-bottom: 15px;
-        border-left: 4px solid #0d6efd;
-        background: #f8f9fa;
-    }
+    /* Modern Stepper Logic */
+    .stepper-wrapper { display: flex; justify-content: space-between; margin-bottom: 2rem; position: relative; }
+    .stepper-item { position: relative; display: flex; flex-direction: column; align-items: center; flex: 1; z-index: 2; }
+    .stepper-item::before { content: ""; position: absolute; top: 20px; left: -50%; width: 100%; height: 2px; background: #e2e8f0; z-index: -1; }
+    .stepper-item:first-child::before { content: none; }
+    .step-counter { width: 40px; height: 40px; background: white; border: 2px solid #e2e8f0; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 8px; font-weight: 700; transition: 0.3s; }
+    .stepper-item.completed .step-counter { background: #10b981; border-color: #10b981; color: white; }
+    .stepper-item.current .step-counter { background: #f59e0b; border-color: #f59e0b; color: white; }
+    .step-name { font-size: 11px; font-weight: 600; text-transform: uppercase; color: #64748b; }
 
-    .section-earnings { border-left-color: #198754; }
-    .section-deductions { border-left-color: #dc3545; }
-    .section-loans { border-left-color: #fd7e14; }
-    .section-summary { border-left-color: #0d6efd; }
+    /* Financial Input Styling */
+    .ledger-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; margin-bottom: 4px; display: block; }
+    .amount-input-group { position: relative; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; transition: all 0.2s ease; display: flex; align-items: center; overflow: hidden; }
+    .amount-input-group:focus-within { border-color: var(--maroon); box-shadow: 0 0 0 3px rgba(107, 15, 26, 0.1); }
+    .currency-symbol { padding: 0 10px; font-weight: 800; color: #94a3b8; background: #f8fafc; border-right: 1px solid #e2e8f0; height: 100%; display: flex; align-items: center; font-size: 14px; }
+    .money-field { border: none !important; background: transparent !important; font-family: 'JetBrains Mono', monospace; font-weight: 700 !important; font-size: 1.1rem !important; color: #1e293b; padding: 10px 12px !important; text-align: right !important; width: 100%; }
+    .readonly-money { background: #f8fafc !important; color: #475569; }
 
-    .payroll-input {
-        text-align: right;
-    }
+    /* Section Headers */
+    .section-title-custom { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; padding: 8px 12px; border-radius: 6px; margin-bottom: 15px; display: inline-block; }
+    .bg-earnings { background: var(--success-soft); color: #065f46; }
+    .bg-deductions { background: var(--danger-soft); color: #991b1b; }
+    .bg-summary { background: #eff6ff; color: #1e40af; }
 
-    .readonly-field {
-        background-color: #f1f3f5;
-        font-weight: 600;
-    }
-
-
-    /* tracker */
-    .payroll-tracker {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        position: relative;
-        margin: 40px 0;
-        flex-wrap: wrap; /* allow wrapping on small screens */
-    }
-
-    .payroll-tracker::before {
-        content: '';
-        position: absolute;
-        top: 22px;
-        left: 0;
-        width: 100%;
-        height: 4px;
-        background: #e9ecef;
-        z-index: 1;
-    }
-
-    .tracker-step {
-        position: relative;
-        z-index: 2;
-        text-align: center;
-        flex: 1 1 150px; /* flexible width with minimum */
-        margin-bottom: 20px; /* spacing when wrapped */
-    }
-
-    .tracker-circle {
-        width: 40px;
-        height: 40px;
-        margin: 0 auto 8px;
-        border-radius: 50%;
-        background: #dee2e6;
-        line-height: 40px;
-        font-weight: bold;
-    }
-
-    .tracker-step.active .tracker-circle {
-        background: #28a745;
-        color: #fff;
-    }
-
-    .tracker-step.current .tracker-circle {
-        background: #ffc107;
-        color: #000;
-    }
-
-    /* SUB PROCESS */
-    .sub-process {
-        margin-top: 15px;
-        display: flex;
-        justify-content: center;
-        gap: 10px;
-        flex-wrap: wrap; /* wrap sub-steps if needed */
-    }
-
-    .sub-step {
-        font-size: 10px;
-        padding: 5px 10px;
-        border-radius: 20px;
-        background: #dee2e6;
-        white-space: nowrap; /* prevent breaking inside words */
-    }
-
-    .sub-step.active {
-        background: #28a745;
-        color: #fff;
-    }
-
-    .sub-step.current {
-        background: #ffc107;
-        color: #000;
-    }
-
-    /* LEGEND */
-    .tracker-legend {
-        display: flex;
-        gap: 15px;
-        align-items: center;
-        font-size: 14px;
-        flex-wrap: wrap; /* wrap legend items if needed */
-    }
-
-    .legend-item {
-        display: flex;
-        align-items: center;
-        gap: 5px;
-    }
-
-    .legend-item::before {
-        content: '';
-        width: 15px;
-        height: 15px;
-        display: inline-block;
-        border-radius: 50%;
-    }
-
-    .active-legend::before {
-        background-color: #28a745;
-    }
-
-    .current-legend::before {
-        background-color: #ffc107;
-    }
-
-    .pending-legend::before {
-        background-color: #dee2e6;
-    }
-
-    /* RESPONSIVE */
-    @media (max-width: 768px) {
-        .payroll-tracker {
-            flex-direction: column; /* stack steps vertically */
-            align-items: flex-start;
-        }
-
-        .tracker-step {
-            flex: 1 1 100%;
-            text-align: left;
-        }
-
-        .sub-process {
-            justify-content: flex-start;
-        }
-    }
+    /* Net Pay Highlight */
+    .net-pay-highlight { background: #ecfdf5; border: 2px solid #10b981; padding: 20px; border-radius: 12px; text-align: center; }
+    .net-pay-amount { font-size: 2rem !important; color: #047857 !important; letter-spacing: -1px; }
 </style>
-<!-- CONTENT -->
-<main id="mainContent">
-    <?php $this->load->view('template/admin_topbar')?>
-    <div class="row">
-        <div class="col-4 col-sm-4 col-lg-4">
-            <!-- PAYROLL FORM -->
-            <div class="card shadow mb-4">
-                <div class="card-header">
-                    <h5 class="mb-0">Payroll Computation</h5>
-                </div>
 
-                <div class="card-body">
+<main id="mainContent" class="py-4">
+    <div class="container-fluid px-md-4">
+        <div class="topbar d-flex justify-content-between align-items-center p-3 bg-white shadow-sm rounded-3 mb-4">
+            <div class="d-flex align-items-center">
+                <button class="btn btn-maroon d-lg-none me-2" id="menuToggle"><i class="bi bi-list"></i></button>
+                <h5 class="m-0 fw-bold text-dark"><?=$payroll_type?> - <?=$unit?></h5>
+            </div>
+            <div id="runningClock" class="fw-bold text-muted small d-none d-sm-block"></div>
+        </div>
 
-                    <!-- EMPLOYEE SELECT -->
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">Select Employee</label>
-                        <select id="employee_select" class="form-select" required>
-                            <option value="">-- Select Employee --</option>
-                            <?php foreach ($employees as $row): ?>
-                                <?php if (!in_array($row->employee_id, $paid_ids)): ?>
-                                    <option value="<?= $row->employee_id ?>">
-                                        <?= htmlspecialchars(
-                                            $row->name . ' ' .
-                                            (!empty($row->middle_name)
-                                                ? strtoupper(substr($row->middle_name, 0, 1)) . '. '
-                                                : ''
-                                            ) .
-                                            $row->last_name
-                                        ) ?>
-                                        (SG-<?= $row->sg ?> STEP-<?= $row->step ?>)
-                                    </option>
-                                <?php endif; ?>
-                            <?php endforeach; ?>
-                        </select>
-
-                    </div>
-                    <form id="payrollForm" class="container-fluid" style="font-size:14px;">
-                        <input type="hidden" name="employee_id" id="employee_id">
-                        <input type="hidden" name="payroll_period_id" id="payroll_period_id" value="<?= $period_id ?>">
-
-                        <div class="row g-4">
-
-                            <!-- ================= EARNINGS ================= -->
-                            <div class="col-lg-12">
-
-                                <div class="section-title section-earnings">
-                                    Earnings
-                                </div>
-
-                                <div class="row g-3">
-
-                                    <div class="col-md-12">
-                                        <label class="form-label fw-semibold">Basic Monthly Salary</label>
-                                        <input type="text" id="basic_salary" name="basic_salary" class="form-control payroll-input readonly-field" readonly>
-                                    </div>
-
-                                    <div class="col-md-12">
-                                        <label class="form-label fw-bold">Mid-Year Bonus</label>
-                                        <input type="text"
-                                            id="gross_pay"
-                                            name="gross_pay"
-                                            class="form-control payroll-input readonly-field fw-bold text-success"
-                                            readonly>
-                                    </div>
-
-                                </div>
-                            </div>
-
-
-                            <!-- ================= Less ================= -->
-                                <hr>
-                            <div class="col-lg-12">
-
-                                <div class="section-title section-deductions">
-                                    Less: Deductions
-                                    </div>
-
-                                    <div class="row g-3">
-
-                                        <div class="col-md-6">
-                                            <label class="form-label">Withholding Tax</label>
-                                            <input type="number"
-                                                step="0.01"
-                                                id="tax"
-                                                name="tax"
-                                                class="form-control payroll-input">
-                                        </div>
-
-                                    </div>
-                            </div>
-
-
-                            <!-- ================= OTHER DEDUCTIONS ================= -->
-                                <hr>
-                            <div class="col-12 mt-3">
-
-                                <div class="section-title section-loans">
-                                    Other Deductions (Loans / Adjustments)
-                                </div>
-
-                                <div id="loan-deductions-container" class="row g-3"></div>
-                            </div>
-
-
-                            <!-- ================= PAYROLL SUMMARY ================= -->
-                                <hr>
-                            <div class="col-12 mt-4">
-
-                               <div class="section-title section-summary">
-                                    Payroll Summary
-                                </div>
-
-                                <div class="row g-3">
-
-                                    <div class="col-md-6">
-                                        <label class="form-label fw-bold">Total Deductions</label>
-                                        <input type="text"
-                                            id="total_deductions"
-                                            name="total_deductions"
-                                            class="form-control payroll-input readonly-field fw-bold"
-                                            readonly>
-                                    </div>
-
-                                    <div class="col-md-6">
-                                        <label class="form-label fw-bold text-success">Net Pay</label>
-                                        <input type="text"
-                                            id="net_pay"
-                                            name="net_pay"
-                                            class="form-control payroll-input readonly-field fw-bold text-success"
-                                            readonly>
-                                    </div>
-
-                                </div>
-                                <div class="text-end mt-4">
-                                    <button type="submit" class="btn btn-primary px-4">
-                                        Save Payroll
-                                    </button>
-                                </div>
-
-                            </div>
-
-                        </div>
-                    </form>
-
-
+        <div class="card border-0 shadow-sm rounded-4 mb-4">
+            <div class="card-body pt-5">
+                <div class="stepper-wrapper">
+                    <div class="stepper-item <?= ($status >= 1) ? 'completed' : 'current' ?>" id="step-1"><div class="step-counter">1</div><div class="step-name">HR Draft</div></div>
+                    <div class="stepper-item <?= ($status >= 2) ? 'completed' : ($status == 1 ? '' : 'current') ?>" id="step-2"><div class="step-counter">2</div><div class="step-name">Admin</div></div>
+                    <div class="stepper-item" id="step-3"><div class="step-counter">3</div><div class="step-name">Budget</div></div>
+                    <div class="stepper-item" id="step-4"><div class="step-counter">4</div><div class="step-name">Accounting</div></div>
+                    <div class="stepper-item" id="step-5"><div class="step-counter">5</div><div class="step-name">VP Approval</div></div>
+                    <div class="stepper-item" id="step-6"><div class="step-counter">6</div><div class="step-name">Cashier</div></div>
                 </div>
             </div>
         </div>
-        <div class="col-8 col-sm-8 col-lg-8">
-            <div class="card shadow">
-                <div class="card-header d-flex justify-content-between align-items-center">
 
-                    <h5 class="mb-0">
-                        <i class="bi bi-check-circle text-success me-1"></i>
-                        <?= $unit?> ( <?= $payroll_type ?>) 
-                    </h5>
+        <div class="row g-4">
+            <div class="col-xl-4 col-lg-5">
+                <div class="card border-0 shadow-sm rounded-4 border-top border-primary border-4">
+                    <div class="card-header bg-white border-0 py-3">
+                        <h6 class="mb-0 fw-bold">Bonus Computation</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="ledger-label">Employee Selection</label>
+                            <select id="employee_select" class="form-select border-2">
+                                <option value="">-- Select Employee --</option>
+                                <?php foreach ($employees as $row): ?>
+                                    <?php if (!in_array($row->employee_id, $paid_ids)): ?>
+                                        <option value="<?= $row->employee_id ?>">
+                                            <?= htmlspecialchars($row->name . ' ' . $row->last_name) ?> (SG-<?= $row->sg ?>)
+                                        </option>
+                                    <?php endif; ?>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
 
-                    <div>
-                        <?php if($status == 1): ?>
-                            <span class="badge bg-secondary">Draft Payroll</span>
+                        <form id="payrollForm">
+                            <input type="hidden" name="employee_id" id="employee_id">
+                            <input type="hidden" name="payroll_period_id" value="<?= $period_id ?>">
 
-                        <?php elseif($status >= 2 && $status < 7): ?>
-                            <span class="badge bg-warning text-dark">
-                                Pending Admin Approval
-                            </span>
+                            <div class="section-title-custom bg-earnings mb-3">Earnings</div>
+                            <div class="row g-3 mb-4">
+                                <div class="col-12">
+                                    <span class="ledger-label">Monthly Basic Salary</span>
+                                    <div class="amount-input-group readonly-money">
+                                        <span class="currency-symbol">₱</span>
+                                        <input type="text" id="basic_salary" name="basic_salary" class="money-field" readonly>
+                                    </div>
+                                </div>
+                                <div class="col-12">
+                                    <span class="ledger-label">Gross Mid-Year Bonus</span>
+                                    <div class="amount-input-group" style="border: 2px solid #3b82f6;">
+                                        <span class="currency-symbol" style="background:#eff6ff; color:#3b82f6;">₱</span>
+                                        <input type="text" id="gross_pay" name="gross_pay" class="money-field text-primary fw-bold" readonly>
+                                    </div>
+                                </div>
+                            </div>
 
-                        <?php elseif($status == 7): ?>
-                            <span class="badge bg-success">
-                                Approved
-                            </span>
+                            <div class="section-title-custom bg-deductions mb-3">Less: Deductions</div>
+                            <div class="row g-2 mb-4">
+                                <div class="col-12">
+                                    <span class="ledger-label">Withholding Tax</span>
+                                    <div class="amount-input-group">
+                                        <span class="currency-symbol">₱</span>
+                                        <input type="number" step="0.01" id="tax" name="tax" class="money-field" placeholder="0.00">
+                                    </div>
+                                </div>
+                                <div id="loan-deductions-container" class="col-12">
+                                    </div>
+                            </div>
 
-                        <?php elseif($status == 9): ?>
-                            <span class="badge bg-primary">
-                                Released
-                            </span>
-                        <?php endif; ?>
+                            <div class="section-title-custom bg-summary mb-3">Summary</div>
+                            <div class="net-pay-highlight mb-4">
+                                <span class="ledger-label text-success">Net Bonus Amount</span>
+                                <input type="text" id="net_pay" name="net_pay" class="money-field net-pay-amount fw-bold" readonly>
+                            </div>
+
+                            <button type="submit" class="btn btn-primary w-100 py-3 rounded-3 shadow-lg fw-bold fs-5">
+                                <i class="bi bi-shield-check me-2"></i> Save Bonus Entry
+                            </button>
+                        </form>
                     </div>
                 </div>
-                <div class="card-body">
+            </div>
+
+            <div class="col-xl-8 col-lg-7">
+                <div class="col-12 mb-4">
                     <?php if($status >= 2 && $status < 7): ?>
-                        <div class="alert alert-warning d-flex align-items-center mb-3">
-                            <i class="bi bi-hourglass-split me-2"></i>
+                        <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+                            <div class="row g-0">
+                                <div class="col-md-8 p-4" style="background: #f8faff; border-left: 5px solid #4f46e5;">
+                                    <div class="d-flex align-items-center mb-3">
+                                        <div class="bg-primary bg-opacity-10 p-2 rounded-3 me-3">
+                                            <i class="bi bi-cloud-check-fill text-primary fs-4"></i>
+                                        </div>
+                                        <div>
+                                            <h6 class="mb-0 fw-bold text-dark">Submitted to Admin Office</h6>
+                                            <small class="text-muted text-uppercase fw-bold" style="font-size: 10px; letter-spacing: 1px;">Document Verification Stage</small>
+                                        </div>
+                                    </div>
+                                    
+                                    <p class="text-muted small mb-4">
+                                        This payroll batch has been officially timestamped and transmitted. The computation is currently <strong>locked</strong> to preserve data integrity during the review process.
+                                    </p>
+
+                                    <div class="d-flex gap-3">
+                                        <div class="p-3 bg-white rounded-3 border flex-fill">
+                                            <label class="text-uppercase text-muted fw-bold mb-1" style="font-size: 9px;">Tracking Token</label>
+                                            <div class="h5 mb-0 fw-bold text-primary" style="font-family: 'JetBrains Mono', monospace;">
+                                                <?= $token_id ?>
+                                            </div>
+                                        </div>
+                                        <div class="p-3 bg-white rounded-3 border flex-fill">
+                                            <label class="text-uppercase text-muted fw-bold mb-1" style="font-size: 9px;">Current Status</label>
+                                            <div class="h6 mb-0 fw-bold text-warning">
+                                                <i class="bi bi-hourglass-split me-1"></i> PENDING APPROVAL
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-4 d-flex flex-column align-items-center justify-content-center p-4" style="background: #ffffff; border-left: 1px dashed #e2e8f0;">
+                                    <div class="text-center">
+                                        <img src="<?= base_url($qr_code) ?>" 
+                                            alt="Payroll Token QR" 
+                                            class="img-fluid rounded-3 mb-2 border p-1 bg-white shadow-sm"
+                                            style="width: 200px; height: 200px;">
+                                        <div class="fw-bold text-dark" style="font-size: 10px; letter-spacing: 2px;">SCAN TO VERIFY</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                    <?php elseif($status == 1): ?>
+                        <div class="alert border-0 shadow-sm rounded-4 d-flex align-items-center p-3" style="background: #fffbeb; border-left: 5px solid #f59e0b !important;">
+                            <div class="spinner-grow text-warning spinner-grow-sm me-3"></div>
                             <div>
-                                This payroll has been <strong>submitted by HR</strong> and is currently
-                                <strong>awaiting approval from the Admin Office</strong><br>
-                                <strong>Token ID: <?= $token_id ?></strong>
+                                <h6 class="mb-0 fw-bold text-dark small">DRAFT MODE: Currently encoding entries.</h6>
+                                <p class="mb-0 x-small text-muted">Batch is open for modifications. <strong>Operations > Finalize & Submit</strong> to lock batch.</p>
                             </div>
                         </div>
                     <?php endif; ?>
-                    <div class="row g-3 mb-3">
-                        <div class="card-body">
+                </div>
 
-                            <div class="tracker-legend mb-4">
-                                <span class="legend-item active-legend">Completed</span>
-                                <span class="legend-item current-legend">Current</span>
-                                <span class="legend-item pending-legend">Pending</span>
-                            </div>
-
-                            <div class="payroll-tracker">
-
-                                <div class="tracker-step" id="step-1">
-                                    <div class="tracker-circle">1</div>
-                                    <div>HR</div>
-                                </div>
-
-                                <div class="tracker-step" id="step-2">
-                                    <div class="tracker-circle">2</div>
-                                    <div>Admin Office</div>
-                                </div>
-
-                                <div class="tracker-step" id="step-3">
-                                    <div class="tracker-circle">3</div>
-                                    <div>Budget Office</div>
-                                </div>
-
-                                <div class="tracker-step" id="step-4">
-                                    <div class="tracker-circle">4</div>
-                                    <div>Accounting Office</div>
-                                </div>
-
-                                <div class="tracker-step" id="step-5">
-                                    <div class="tracker-circle">5</div>
-                                    <div>VP for Signing</div>
-                                </div>
-
-                                <div class="tracker-step" id="step-6">
-                                    <div class="tracker-circle">6</div>
-                                    <div>Cashier (Bank Release)</div>
-                                </div>
-
-                            </div>
-
-                        </div>
-                        <div class="col-12 col-sm-6 col-lg-4">
-                            <div class="card border-success shadow-sm h-100">
-                                <div class="card-body py-3 px-3">
-                                    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
-                                        <div>
-                                            <div class="text-muted small text-uppercase fw-semibold">
-                                                Total Gross Pay
-                                            </div>
-                                            <h5 class="mb-0 fw-bold text-success" id="total_gross_pay">
-                                                ₱0.00
-                                            </h5>
-                                        </div>
-                                        <div class="text-success dashboard-icon">
-                                            <i class="bi bi-cash-stack"></i>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="col-12 col-sm-6 col-lg-4">
-                            <div class="card border-danger shadow-sm h-100">
-                                <div class="card-body py-3 px-3">
-                                    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
-                                        <div>
-                                            <div class="text-muted small text-uppercase fw-semibold">
-                                                Total Deductions
-                                            </div>
-                                            <h5 class="mb-0 fw-bold text-danger" id="total_deduction">
-                                                ₱0.00
-                                            </h5>
-                                        </div>
-                                        <div class="text-danger dashboard-icon">
-                                            <i class="bi bi-dash-circle"></i>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- ACTION BUTTONS -->
-                        <div class="col-12 col-lg-4">
-                            <div class="card shadow-sm h-100">
-                                <div class="card-body d-flex justify-content-center align-items-center">
-
-                                    <div class="dropdown w-100">
-                                        <button class="btn btn-outline-secondary btn-sm w-100 dropdown-toggle"
-                                                type="button"
-                                                data-bs-toggle="dropdown"
-                                                aria-expanded="false">
-                                            <i class="bi bi-gear-fill me-1"></i> Actions
-                                        </button>
-
-                                        <ul class="dropdown-menu dropdown-menu-end w-100 shadow">
-
-                                            <!-- PRINT -->
-                                            <li>
-                                                <a class="dropdown-item"
-                                                href="#"
-                                                id="btnPrint"
-                                                data-url="<?= base_url('payroll/general_payroll/'.$period_id) ?>">
-                                                    <i class="bi bi-printer me-2"></i> Print Payroll
-                                                </a>
-                                            </li>
-
-                                            <!-- SUBMIT -->
-                                           <?php if($status == 1): ?>
-                                                <li>
-                                                    <a class="dropdown-item submit_payroll"
-                                                    href="#"
-                                                    data-period_id="<?= $period_id ?>"
-                                                    data-payroll_number="<?= $payroll_number ?>"> <!-- add payroll_number -->
-                                                        <i class="bi bi-check-circle me-2"></i> Submit Payroll
-                                                    </a>
-                                                </li>
-                                                <?php else: ?>
-                                                <li>
-                                                    <span class="dropdown-item text-muted">
-                                                        <i class="bi bi-hourglass-split me-2"></i>
-                                                        Payroll Submitted
-                                                    </span>
-                                                </li>
-                                            <?php endif; ?>
-                                            <!-- GENERATE PAYSLIPS -->
-                                            <li>
-                                                <a class="dropdown-item"
-                                                href="#"
-                                                onclick="generatePayslips(<?= $period_id ?>)">
-                                                    <i class="bi bi-receipt me-2"></i> Generate Payslips
-                                                </a>
-                                            </li>
-                                        </ul>
-                                    </div>
-                                </div>
+                <div class="row g-3 mb-4">
+                    <div class="col-md-6">
+                        <div class="card border-0 shadow-sm rounded-4 bg-primary text-white">
+                            <div class="card-body py-4">
+                                <small class="text-uppercase opacity-75 fw-bold x-small">Batch Total Gross</small>
+                                <h3 class="mb-0 fw-bold" id="total_gross_pay">₱ 0.00</h3>
                             </div>
                         </div>
                     </div>
-                    <table class="table table-xsm table-bordered" id="savedPayrollTable">
-                        <thead class="table-light">
-                            <tr>
-                                <th>NAME</th>
-                                <th>POSITION</th>
-                                <th>BASIC PAY</th>
-                                <th>MIDYEAR BONUS</th>
-                                <th>LESS</th>
-                                <th>TAX</th>
-                                <th>NET PAY</th>
-                            </tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
+                    <div class="col-md-6">
+                        <div class="card border-0 shadow-sm rounded-4 bg-dark text-white">
+                            <div class="card-body py-4">
+                                <small class="text-uppercase opacity-75 fw-bold x-small">Batch Total Deductions</small>
+                                <h3 class="mb-0 fw-bold" id="total_deduction">₱ 0.00</h3>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+                    <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0 fw-bold">Bonus Registry</h6>
+                        <div class="dropdown">
+                            <button class="btn btn-light btn-sm border rounded-pill px-3 dropdown-toggle shadow-sm" data-bs-toggle="dropdown">
+                                <i class="bi bi-download me-1 text-primary"></i> Operations
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end shadow border-0 p-2">
+                                <li><a class="dropdown-item py-2" href="#" id="btnPrint" data-url="<?= base_url('payroll/export_pdf_mid/'.$period_id) ?>">
+                                    <i class="bi bi-file-pdf me-2 text-danger"></i>Download Payroll PDF
+                                </a></li>
+                                <li><a class="dropdown-item py-2" href="<?= base_url('payroll/export_transmittal_pdf_mid/'. $period_id) ?>">
+                                    <i class="bi bi-send-check me-2 text-primary"></i>Download Transmittal
+                                </a></li>
+                                <li><a class="dropdown-item py-2" href="#" onclick="generatePayslips(<?= $period_id ?>)">
+                                    <i class="bi bi-receipt me-2 text-success"></i>Generate Payslips
+                                </a></li>
+                                <?php if($status == 1): ?>
+                                <li><hr class="dropdown-divider"></li>
+
+                    
+                                <li><a class="dropdown-item py-2 text-primary fw-bold submit_payroll" href="#" data-period_id="<?= $period_id ?>" data-payroll_number="<?= $payroll_number ?>">
+                                    <i class="bi bi-check-all me-2"></i>Finalize & Submit
+                                </a></li>
+                                <?php endif; ?>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0" id="savedPayrollTable">
+                                <thead class="table-light">
+                                    <tr class="x-small text-muted text-uppercase">
+                                        <th class="ps-4">Name</th>
+                                        <th>Position</th>
+                                        <th class="text-end">Basic</th>
+                                        <th class="text-end">Bonus</th>
+                                        <th class="text-end">Deductions</th>
+                                        <th class="text-end pe-4">Net Pay</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -680,41 +425,97 @@ $(document).on('keyup change', '.loan-input', function(){
 $('#payrollForm').on('submit', function(e) {
     e.preventDefault();
 
-    // Remove commas for numeric fields before sending
-    $('#basic_salary').val($('#basic_salary').val().replace(/,/g,''));
-    $('#gross_pay').val($('#gross_pay').val().replace(/,/g,''));
-    $('#total_deductions').val($('#total_deductions').val().replace(/,/g,''));
-    $('#net_pay').val($('#net_pay').val().replace(/,/g,''));
+    // Safety function: returns "0" if the field is empty/undefined
+    const getCleanVal = (id) => {
+        let el = document.getElementById(id);
+        return (el && el.value) ? el.value.replace(/,/g, '') : '0';
+    };
 
-    let formData = $(this).serialize();
+    // Prevent submission if no employee selected
+    if (!$('#employee_id').val()) {
+        Swal.fire('Wait!', 'Please select an employee first.', 'warning');
+        return;
+    }
 
-    $.post("<?= base_url('payroll/save_midyear_payroll') ?>", formData, function(res) {
-        if (res.status === 'success') {
+    // Update fields with "clean" numbers before sending to PHP
+    $('#basic_salary').val(getCleanVal('basic_salary'));
+    $('#gross_pay').val(getCleanVal('gross_pay'));
+    $('#tax').val(getCleanVal('tax'));
+    $('#total_deductions').val(getCleanVal('total_deductions'));
+    $('#net_pay').val(getCleanVal('net_pay'));
 
-            // Refresh saved payroll if needed
-            loadSavedPayroll();
+   $.ajax({
+        url: "<?= base_url('payroll/save_midyear_payroll') ?>",
+        type: "POST",
+        data: $(this).serialize(),
+        dataType: "json",
+        success: function(res) {
+            if (res.status === 'success') {
+                const currentId = $('#employee_id').val();
+                const $select = $('#employee_select');
+                
+                // 1. Find the NEXT option in the list after the current one
+                const $currentOption = $select.find(`option[value="${currentId}"]`);
+                const $nextOption = $currentOption.nextAll('option').filter(function() {
+                    return $(this).val() !== "";
+                }).first();
 
-            // Store current employee id before resetting form
-            let currentEmpId = $('#employee_id').val();
+                // 2. Prepare the Alert message
+                let alertTitle = 'Entry Saved!';
+                let alertText = 'The payroll record has been added.';
+                let confirmText = 'OK';
 
-            // Reset form fields (keep hidden payroll period)
-            resetPayrollForm();
+                if ($nextOption.length > 0) {
+                    const nextName = $nextOption.text().trim();
+                    alertText = `Payroll saved. Next up: <strong>${nextName}</strong>`;
+                    confirmText = `Process ${nextName}`;
+                } else {
+                    alertText = 'All employees in this unit have been processed.';
+                    confirmText = 'Finish Batch';
+                }
 
-            // Remove saved employee from select
-            $('#employee_select option[value="'+currentEmpId+'"]').remove();
-
-            // Move to next employee
-            selectNextEmployee();
-
-        } else {
-            console.error(res.message);
-            alert('Failed to save payroll.');
+                // 3. Display the Alert with the name and Button
+                Swal.fire({
+                    title: alertTitle,
+                    html: alertText, // using 'html' allows the bold tags
+                    icon: 'success',
+                    confirmButtonColor: '#6b0f1a', // Using your maroon theme
+                    confirmButtonText: confirmText,
+                    allowOutsideClick: false
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        // 4. Remove processed employee
+                        $currentOption.remove();
+                        
+                        // 5. Load the next one
+                        resetPayrollForm();
+                        autoSelectNext(); 
+                        
+                        // 6. Refresh summary table
+                        loadSavedPayroll();
+                    }
+                });
+            } else {
+                Swal.fire('Error', res.message, 'error');
+            }
         }
-    }, 'json').fail(function() {
-        alert('Server error. Could not save payroll.');
     });
 });
+function autoSelectNext() {
+    const $select = $('#employee_select');
+    
+    // Find the first valid option remaining
+    const firstAvailable = $select.find('option').filter(function() {
+        return $(this).val() !== "";
+    }).first();
 
+    if (firstAvailable.length > 0) {
+        $select.val(firstAvailable.val()).trigger('change');
+    } else {
+        // Fallback if the list is empty
+        $select.val("").trigger('change');
+    }
+}
 // Helper: Reset payroll form
 function resetPayrollForm() {
     $('#employee_id').val('');
@@ -986,6 +787,44 @@ $(document).ready(function () {
         $('#payrollForm button[type="submit"]').hide();
     }
 
+});
+
+$(document).ready(function() {
+
+    // Handle Payroll PDF Download
+    $('#btnPrint').on('click', function(e) {
+        e.preventDefault();
+        const url = $(this).data('url');
+        window.open(url, '_blank'); // Opens PDF in new tab
+    });
+
+    // Handle Payslip Generation via AJAX
+    window.generatePayslips = function(period_id) {
+        Swal.fire({
+            title: 'Generate Payslips?',
+            text: "This will prepare individual payslips for all processed employees.",
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#198754',
+            confirmButtonText: 'Yes, Generate'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                // Show loading state
+                Swal.fire({
+                    title: 'Processing...',
+                    didOpen: () => { Swal.showLoading() }
+                });
+
+                $.post("<?= base_url('payroll/generate_payslips_mid/') ?>" + period_id, function(res) {
+                    if(res.status === 'success') {
+                        Swal.fire('Success!', res.message, 'success');
+                    } else {
+                        Swal.fire('Error', res.message, 'error');
+                    }
+                }, 'json');
+            }
+        });
+    };
 });
 
 </script>

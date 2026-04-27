@@ -39,7 +39,7 @@
 <li class="nav-item px-3 text-uppercase text-white-50 small mt-4">Remittances</li>
 
 <li class="nav-item">
-    <a class="nav-link" href="<?=base_url('payroll/gsis_remittance_list')?>" target="_blank">
+    <a class="nav-link" href="<?=base_url('payroll/gsis_remittance_list')?>">
         <i class="bi bi-bank"></i> GSIS
     </a>
 </li>
@@ -75,11 +75,11 @@
                         Tax Rate
                     </a>
                 </li>
-                <li class="nav-item">
+                <!-- <li class="nav-item">
                     <a class="nav-link" href="<?= base_url('payroll/signatories') ?>">
                         Signatories
                     </a>
-                </li>
+                </li> -->
                 <li class="nav-item">
                     <a class="nav-link" href="<?= base_url('payroll/users') ?>">
                         Users

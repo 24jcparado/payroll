@@ -200,11 +200,15 @@
             </div>
         </header>
 
-        <?php if($this->session->flashdata('error')): ?>
+        <?php if($this->session->flashdata('error')){ ?>
             <div class="alert alert-danger border-0 rounded-4 py-3 small mb-4 shadow-sm section-animate" role="alert">
                 <i class="bi bi-exclamation-octagon-fill me-2"></i> <?= $this->session->flashdata('error'); ?>
             </div>
-        <?php endif; ?>
+        <?php } elseif($this->session->flashdata('success')){ ?>
+            <div class="alert alert-success border-0 rounded-4 py-3 small mb-4 shadow-sm section-animate" role="alert">
+                <i class="bi bi-check-circle-fill me-2"></i> <?= $this->session->flashdata('success'); ?>
+            </div>
+        <?php } ?>
 
         <div id="loginSection" class="section-animate">
             <form id="mainLoginForm" method="post" action="<?= base_url('welcome/login') ?>">

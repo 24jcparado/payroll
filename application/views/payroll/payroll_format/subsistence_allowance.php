@@ -47,67 +47,15 @@
         <div class="card border-0 shadow-sm rounded-4 mb-4">
             <div class="card-body pt-5">
                 <div class="stepper-wrapper">
-                    <!-- Step 1: HR Draft -->
-                    <div class="stepper-item <?= ($status > 1) ? 'completed' : (($status == 1) ? 'current' : '') ?>" id="step-1">
-                        <div class="step-counter">1</div>
-                        <div class="step-name">HR Draft</div>
-                    </div>
-                    
-                    <!-- Step 2: Admin -->
-                    <div class="stepper-item <?= ($status > 2) ? 'completed' : (($status == 2) ? 'current' : '') ?>" id="step-2">
-                        <div class="step-counter">2</div>
-                        <div class="step-name">Admin</div>
-                    </div>
-                    
-                    <!-- Step 3: Budget -->
-                    <div class="stepper-item <?= ($status > 3) ? 'completed' : (($status == 3) ? 'current' : '') ?>" id="step-3">
-                        <div class="step-counter">3</div>
-                        <div class="step-name">Budget</div>
-                    </div>
-                    
-                    <!-- Step 4: Accounting -->
-                    <div class="stepper-item <?= ($status > 4) ? 'completed' : (($status == 4) ? 'current' : '') ?>" id="step-4">
-                        <div class="step-counter">4</div>
-                        <div class="step-name">Accounting</div>
-                    </div>
-                    
-                    <!-- Step 5: VP Approval -->
-                    <div class="stepper-item <?= ($status > 5) ? 'completed' : (($status == 5) ? 'current' : '') ?>" id="step-5">
-                        <div class="step-counter">5</div>
-                        <div class="step-name">VP Approval</div>
-                    </div>
-                    
-                    <!-- Step 6: Cashier -->
-                    <div class="stepper-item <?= ($status > 6) ? 'completed' : (($status == 6) ? 'current' : '') ?>" id="step-6">
-                        <div class="step-counter">6</div>
-                            <div class="step-name">Cashier
-                        </div>
-                    </div>
+                    <div class="stepper-item <?= ($status >= 1) ? 'completed' : 'current' ?>" id="step-1"><div class="step-counter">1</div><div class="step-name">HR Draft</div></div>
+                    <div class="stepper-item <?= ($status >= 2) ? 'completed' : ($status == 1 ? '' : 'current') ?>" id="step-2"><div class="step-counter">2</div><div class="step-name">Admin</div></div>
+                    <div class="stepper-item" id="step-3"><div class="step-counter">3</div><div class="step-name">Budget</div></div>
+                    <div class="stepper-item" id="step-4"><div class="step-counter">4</div><div class="step-name">Accounting</div></div>
+                    <div class="stepper-item" id="step-5"><div class="step-counter">5</div><div class="step-name">VP Approval</div></div>
+                    <div class="stepper-item" id="step-6"><div class="step-counter">6</div><div class="step-name">Cashier</div></div>
                 </div>
-                <!-- Step 7 Completion Alert & Email Action -->
             </div>
         </div>
-
-         <?php if($status >= 7): ?>
-            <div class="alert mb-4 mb-0 border-0 rounded-4 shadow-sm" style="background-color: #f0fdf4; border-left: 5px solid #10b981 !important;">
-                <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
-                    <div class="d-flex align-items-center">
-                        <div class="bg-success bg-opacity-10 p-3 rounded-circle me-3">
-                            <i class="bi bi-check-circle-fill text-success fs-3"></i>
-                        </div>
-                        <div>
-                            <h5 class="mb-1 fw-bold text-dark">Payroll Processing Complete</h5>
-                            <p class="mb-0 text-muted small">All approval stages are finished. You may now distribute the electronic payslips to the employees.</p>
-                        </div>
-                    </div>
-                    <div>
-                        <button type="button" class="btn btn-success fw-bold px-4 py-2 rounded-pill shadow-sm" id="btnEmailPayslips" data-period_id="<?= $period_id ?>">
-                            <i class="bi bi-envelope-paper-fill me-2"></i> Email E-Payslips
-                        </button>
-                    </div>
-                </div>
-            </div>
-        <?php endif; ?>
 
         <div class="row g-4">
             <div class="col-xl-4 col-lg-5">
@@ -882,75 +830,4 @@ $(document).ready(function() {
     };
 });
 
-/* ===============================
-    EMAIL E-PAYSLIPS TO EMPLOYEES
-================================ */
-
-$(document).on('click', '#btnEmailPayslips', function() {
-    let period_id = $(this).attr('data-period_id');
-    if (!period_id) {
-        Swal.fire('Error', 'Period ID is missing from the button!', 'error');
-        return;
-    }
-    Swal.fire({
-        title: 'Send E-Payslips?',
-        html: "This will automatically generate and email the PDF payslips to all <strong>processed employees</strong> in this batch.",
-        icon: 'question',
-        showCancelButton: true,
-        confirmButtonColor: '#10b981', // Match the success green
-        cancelButtonColor: '#6c757d',
-        confirmButtonText: '<i class="bi bi-send-fill me-1"></i> Yes, send them now!',
-        cancelButtonText: 'Wait, cancel'
-    }).then((result) => {
-        if (result.isConfirmed) {
-            
-            // Show a persistent loading state since emailing can take time
-            Swal.fire({
-                title: 'Sending Emails...',
-                html: 'Please do not close this window. This may take a moment depending on the batch size.',
-                allowOutsideClick: false,
-                allowEscapeKey: false,
-                didOpen: () => {
-                    Swal.showLoading()
-                }
-            });
-
-            // Send the request to your controller
-            $.ajax({
-                url: "<?= base_url('payroll/email_batch_payslips') ?>",
-                type: "POST",
-                data: { 
-                    period_id: period_id,
-                    '<?= $this->security->get_csrf_token_name() ?>': '<?= $this->security->get_csrf_hash() ?>'
-                 },
-                dataType: "json",
-                success: function(res) {
-                    if (res.status === 'success') {
-                        Swal.fire({
-                            title: 'Success!',
-                            text: res.message || 'All payslips have been successfully dispatched.',
-                            icon: 'success',
-                            confirmButtonColor: '#10b981'
-                        });
-                    } else {
-                        Swal.fire({
-                            title: 'Warning',
-                            text: res.message || 'The process finished, but some emails may have failed. Please check the logs.',
-                            icon: 'warning'
-                        });
-                    }
-                },
-                error: function() {
-                    Swal.fire({
-                        title: 'Server Error',
-                        text: 'Unable to communicate with the mail server. Please try again later.',
-                        icon: 'error'
-                    });
-                }
-            });
-        }
-    });
-});
-
 </script>
-

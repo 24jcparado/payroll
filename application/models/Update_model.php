@@ -96,5 +96,20 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 
                 return $this->db->get()->result();
             }
+        public function update_employee_loan($loan_id, $data)
+        {
+            $this->db->where('employee_loan_id', $loan_id);
+            $this->db->update('tbl_py_employee_loans', $data);
+
+            // Return true if the query executed successfully
+            return $this->db->affected_rows() >= 0; 
+        }
+
+        public function delete_payroll_period($id)
+        {
+            $this->db->where('payroll_period_id', $id); 
+            $this->db->delete('tbl_py_payroll_period');
+            return $this->db->affected_rows() > 0;
+        }
 
     }

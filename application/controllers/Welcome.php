@@ -34,7 +34,6 @@ class Welcome extends MY_Controller {
 		$session_token = $this->session->userdata('reg_token');
 
 		if (!$form_token || $form_token !== $session_token) {
-
 			$this->_log_attempt($email, $ip, $user_agent, 'error', 'Invalid or missing registration token');
 			show_error('Invalid request token.', 403);
 			return;
@@ -46,7 +45,6 @@ class Welcome extends MY_Controller {
 		$user = $this->Get_model->getUserByEmail($email);
 
 		if (!$user) {
-
 			$this->_log_attempt($email, $ip, $user_agent, 'error', 'User not found');
 			$this->session->set_flashdata('error', 'Invalid login credentials.');
 			redirect('welcome');
@@ -57,7 +55,6 @@ class Welcome extends MY_Controller {
 
 		/* ================= ACCOUNT STATUS CHECK ================= */
 		if (empty($user['active'])) {
-
 			$this->_log_attempt($email, $ip, $user_agent, 'error', 'Inactive account');
 			$this->session->set_flashdata('error', 'Account is inactive. Contact administrator.');
 			redirect('welcome');
@@ -66,7 +63,6 @@ class Welcome extends MY_Controller {
 
 		/* ================= PASSWORD VERIFY ================= */
 		if (!password_verify($password, $user['password'])) {
-
 			$secret = $this->config->item('encryption_key');
 			$attempt_hash = hash_hmac('sha256', $password, $secret);
 
@@ -78,11 +74,11 @@ class Welcome extends MY_Controller {
 		}
 
 		/* ================= FORCE PASSWORD RESET ================= */
-		if (!empty($user['force_reset']) && $user['force_reset'] == 0) {
-
+		// Check explicitly if it equals 0, avoiding empty() which trips on 0
+		if (isset($user['force_reset']) && $user['force_reset'] == 0) {
 			$this->session->set_userdata('temp_user_id', $user['user_id']);
 			$this->session->set_flashdata('info', 'Please reset your password before continuing.');
-			redirect('auth/force_reset');
+			redirect('welcome/force_reset');
 			return;
 		}
 
@@ -95,9 +91,6 @@ class Welcome extends MY_Controller {
 			$privileges[$k] = (bool) $v;
 		}
 
-		/* ================= SESSION REGENERATE ================= */
-		$this->session->sess_regenerate(TRUE);
-
 		/* ================= SET SESSION ================= */
 		$this->session->sess_regenerate(TRUE);
 
@@ -107,7 +100,7 @@ class Welcome extends MY_Controller {
 			'username'  => $user['username'],
 			'name'      => $user['name'],
 			'user_type' => $user['user_type'],
-			'campus' => $user['campus'],
+			'campus'    => $user['campus'],
 			'privilege' => $privileges,
 			'logged_in' => TRUE
 		]);
@@ -119,7 +112,6 @@ class Welcome extends MY_Controller {
 
 		/* ================= ROLE REDIRECT ================= */
 		switch ($user['user_type']) {
-
 			case 'Admin':
 				redirect('admin');
 				break;
@@ -294,5 +286,71 @@ class Welcome extends MY_Controller {
 
 		/* ================= REDIRECT ================= */
 		redirect('receiver/dashboard');
+	}
+
+	public function force_reset()
+	{
+		// 1. Security Check: Ensure they came from the login page
+		if (!$this->session->userdata('temp_user_id')) {
+			$this->session->set_flashdata('error', 'Unauthorized access.');
+			redirect('welcome'); // Redirect to your login page
+			return;
+		}
+
+		// Load the view (adjust the path to wherever you save the HTML file below)
+		$this->load->view('auth/force_reset'); 
+	}
+
+	public function process_force_reset()
+	{
+		// 1. Security Check
+		$user_id = $this->session->userdata('temp_user_id');
+		if (!$user_id) {
+			redirect('welcome');
+			return;
+		}
+
+		// 2. Fetch Input
+		$new_password     = $this->input->post('new_password', TRUE);
+		$confirm_password = $this->input->post('confirm_password', TRUE);
+
+		// 3. Validation
+		if (empty($new_password) || empty($confirm_password)) {
+			$this->session->set_flashdata('error', 'Please fill in all fields.');
+			redirect('auth/force_reset');
+			return;
+		}
+
+		if (strlen($new_password) < 8) {
+			$this->session->set_flashdata('error', 'Password must be at least 8 characters long.');
+			redirect('auth/force_reset');
+			return;
+		}
+
+		if ($new_password !== $confirm_password) {
+			$this->session->set_flashdata('error', 'Passwords do not match.');
+			redirect('auth/force_reset');
+			return;
+		}
+
+		// 4. Update the Database
+		$hashed_password = password_hash($new_password, PASSWORD_BCRYPT);
+		
+		$update_data = [
+			'password'    => $hashed_password,
+			'force_reset' => 1 // Change status to 1 so they aren't trapped in the reset loop
+		];
+
+		$this->db->where('user_id', $user_id); // Make sure 'user_id' matches your table's primary key
+		$update = $this->db->update('user', $update_data);
+
+		if ($update) {
+			$this->session->unset_userdata('temp_user_id');
+			$this->session->set_flashdata('success', 'Password updated successfully! You may now log in.');
+			redirect('welcome');
+		} else {
+			$this->session->set_flashdata('error', 'A database error occurred. Please try again.');
+			redirect('welcome/force_reset');
+		}
 	}
 }

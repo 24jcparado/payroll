@@ -193,6 +193,12 @@ defined('BASEPATH') OR exit('No direct script access allowed');
             return $this->db->get()->result();
         }
 
+        public function delete_loan_by_id($id) {
+            $this->db->where('employee_loan_id', $id); 
+            $this->db->delete('tbl_py_employee_loans');
+            return $this->db->affected_rows() > 0;
+        }
+
 
         public function get_all_deductions()
         {
@@ -232,7 +238,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
         public function getEmployeeSalary($employee_id)
         {
             return $this->db
-                ->select('e.employee_id, sg.amount')
+                ->select('e.employee_id, e.sg, sg.amount')
                 ->from('tbl_employee e')
                 ->join(
                     'tbl_py_salary_grade sg',
@@ -307,15 +313,18 @@ defined('BASEPATH') OR exit('No direct script access allowed');
             $this->db->select("
                 p.*,
                 CONCAT(e.last_name, ', ', e.name, ' ', LEFT(e.middle_name,1), '.') as name,
-                e.position
+                e.position,
+                pp.date_period
             ");
-
             $this->db->from('tbl_py_midyear_bonus p');
-            $this->db->join('tbl_employee e','e.employee_id = p.employee_id','left');
+            $this->db->join('tbl_employee e', 'e.employee_id = p.employee_id', 'left');
+            $this->db->join('tbl_py_payroll_period pp', 'pp.payroll_period_id = p.payroll_period_id', 'left');
 
+            // 4. Set conditions and ordering
             $this->db->where('p.payroll_period_id', $period_id);
-            $this->db->order_by('e.last_name','ASC');
+            $this->db->order_by('e.last_name', 'ASC');
 
+            // 5. Execute and return
             return $this->db->get()->result();
         }
         public function getPayrollByPeriodMY($payroll_period_id)
@@ -323,6 +332,16 @@ defined('BASEPATH') OR exit('No direct script access allowed');
             return $this->db
             ->select('*')
             ->from('tbl_py_midyear_bonus')
+            ->where('payroll_period_id', $payroll_period_id)
+            ->get()
+            ->result_array(); 
+        }
+
+        public function getPayrollByPeriodHazard($payroll_period_id)
+        {
+            return $this->db
+            ->select('*')
+            ->from('tbl_py_hazard_pay')
             ->where('payroll_period_id', $payroll_period_id)
             ->get()
             ->result_array(); 
@@ -587,6 +606,14 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                 ->row();
         }
 
+        public function get_midpayroll_by_id($id)
+        {
+            return $this->db
+                ->where('payroll_period_id', $id)
+                ->get('tbl_py_midyear_bonus')
+                ->row();
+        }
+
         public function get_employee_deductions($period_id)
         {
             $result = $this->db
@@ -670,6 +697,22 @@ defined('BASEPATH') OR exit('No direct script access allowed');
             $this->db->group_end();
 
             return $this->db->get()->result();
+        }
+        public function getLastSequenceByPattern($pattern) {
+            $this->db->select('payroll_number');
+            $this->db->like('payroll_number', $pattern, 'after');
+            $this->db->order_by('payroll_number', 'DESC');
+            $this->db->limit(1);
+            
+            $query = $this->db->get('tbl_py_payroll_period'); 
+
+            if ($query->num_rows() > 0) {
+                $row = $query->row();
+                $parts = explode('-', $row->payroll_number);
+                return end($parts);
+            }
+            
+            return false;
         }
 
     }

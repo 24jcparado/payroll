@@ -34,4 +34,8 @@ class Pdf
     {
         $this->dompdf->stream($filename, $options);
     }
+    public function output()
+    {
+        return $this->dompdf->output();
+    }
 }

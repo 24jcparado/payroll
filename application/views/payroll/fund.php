@@ -1,5 +1,6 @@
 <style>
     .x-small { font-size: 0.75rem; }
+    .bg-maroon { background-color: #6b0f1a; color: white; }
     .btn-maroon { background-color: #6b0f1a; color: white; transition: 0.3s; border: none; }
     .btn-maroon:hover { background-color: #4a0a0b; color: white; transform: translateY(-2px); shadow: 0 4px 8px rgba(0,0,0,0.2); }
     .stat-card { border-radius: 15px; border: 0; transition: 0.3s; }
@@ -39,7 +40,7 @@
             ?>
             <div class="col-md-4">
                 <div class="card stat-card shadow-sm bg-dark text-white">
-                    <div class="card-body p-4">
+                    <div class="card-body">
                         <small class="text-uppercase opacity-50 fw-bold x-small">Total Budget Pool</small>
                         <h2 class="fw-bold mb-0">₱<?= number_format($totalAlloc, 2) ?></h2>
                     </div>
@@ -64,7 +65,7 @@
         </div>
 
         <div class="card border-0 shadow-sm rounded-4">
-            <div class="card-body p-0">
+            <div class="card-body">
                 <div class="table-responsive">
                     <table id="periodTable" class="table table-hover align-middle mb-0" style="width:100%">
                         <thead class="bg-light">

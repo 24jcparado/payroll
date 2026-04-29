@@ -120,7 +120,7 @@ class Payroll extends MY_Controller {
 			'created_at'     => date('Y-m-d H:i:s')
 		];
 
-		if($payroll_type == 'OJT HONORARIUM'){
+		if($payroll_type == 'OJT HONORARIUM' || $payroll_type == 'MID-YEAR BONUS'){
 
 			$data['date_period'] = $this->input->post('current_year', TRUE);
 			$data['particulars'] = $this->input->post('particulars', TRUE);
@@ -134,6 +134,26 @@ class Payroll extends MY_Controller {
 
 		redirect($_SERVER['HTTP_REFERER']);
 	}
+
+	public function getNextSequence() {
+		$pattern = $this->input->get('pattern', TRUE); 
+
+		if (!$pattern) {
+			echo json_encode(['error' => 'Pattern is required']);
+			return;
+		}
+		$latestSequence = $this->Get_model->getLastSequenceByPattern($pattern);
+
+		if ($latestSequence) {
+			$nextNum = intval($latestSequence) + 1;
+		} else {
+			$nextNum = 1;
+		}
+
+		$formattedSequence = str_pad($nextNum, 5, '0', STR_PAD_LEFT);
+		echo json_encode(['nextSequence' => $formattedSequence]);
+	}
+
 
 	public function view($period_id)
 	{
@@ -167,9 +187,14 @@ class Payroll extends MY_Controller {
 			case 'DAILY WAGE':
 				redirect('payroll/run_daily_wage/' . $period_id);
 				break;
-
 			case 'CONTRACT OF SERVICE':
 				redirect('payroll/run_daily_wage/' . $period_id);
+				break;
+			case 'HAZARD PAY':
+				redirect('payroll/run_hazard_pay/' . $period_id);
+				break;
+			case 'SUBSISTENCE AND LAUNDRY ALLOWANCE':
+				redirect('payroll/run_subsistence_allowance/' . $period_id);
 				break;
 			default:
 				show_error('Invalid payroll type.');
@@ -230,7 +255,19 @@ class Payroll extends MY_Controller {
 
 		echo json_encode($loans);
 	}
-
+	public function delete_loan($id = NULL) {
+        if ($id === NULL) {
+            show_404(); 
+        }
+        $deleted = $this->Get_model->delete_loan_by_id($id);
+        if ($deleted) {
+            $this->session->set_flashdata('success', 'Loan record deleted successfully.');
+        } else {
+            $this->session->set_flashdata('error', 'Failed to delete the loan record.');
+        }
+		redirect($_SERVER['HTTP_REFERER']);
+    }
+	
 	public function run_daily_wage($period_id)
 	{
 		
@@ -248,6 +285,7 @@ class Payroll extends MY_Controller {
 			'payroll_number'  => $period->payroll_number,
 			'unit'            => $period->unit,
 			'token_id'        => $period->token_id,
+			'qr_code'        => $period->qr_code,
 			'payroll_type'    => $period->payroll_type,
 			'period_id'       => $period->payroll_period_id,
 			'status'          => $period->status
@@ -285,6 +323,64 @@ class Payroll extends MY_Controller {
 		$data['period'] = 'Mid-Year Bonus';
 		$this->load->view('template/admin_header');
 		$this->load->view('payroll/payroll_format/mid_year', $data);
+		$this->load->view('template/admin_footer');
+	}
+
+	public function run_hazard_pay($period_id)
+	{
+		$period = $this->Get_model->get_period($period_id);
+		$employees = $this->Get_model->get_employees_for_payroll(
+			$period->payroll_period_id,
+			$period->unit
+		);
+		$paid_ids_array = $this->Get_model->getPayrollByPeriodHazard($period_id);
+		$paid_ids = array_column($paid_ids_array, 'employee_id'); // get plain array of IDs
+		
+		$data = [
+			'page'            => 'Payroll',
+			'employees'       => $employees,
+			'paid_ids'        => $paid_ids,
+			'payroll_number'  => $period->payroll_number,
+			'unit'            => $period->unit,
+			'token_id'        => $period->token_id,
+			'qr_code'        => $period->qr_code,
+			'payroll_type'    => $period->payroll_type,
+			'period_id'       => $period->payroll_period_id,
+			'status'          => $period->status
+		];
+		$data['payrolls'] = $this->Get_model->getPayrollByPeriodHazard($period_id);
+		$data['period'] = 'Hazard Pay';
+		$this->load->view('template/admin_header');
+		$this->load->view('payroll/payroll_format/hazard_pay', $data);
+		$this->load->view('template/admin_footer');
+	}
+
+	public function run_subsistence_allowance($period_id)
+	{
+		$period = $this->Get_model->get_period($period_id);
+		$employees = $this->Get_model->get_employees_for_payroll(
+			$period->payroll_period_id,
+			$period->unit
+		);
+		$paid_ids_array = $this->Get_model->getPayrollByPeriodMY($period_id);
+		$paid_ids = array_column($paid_ids_array, 'employee_id'); // get plain array of IDs
+		
+		$data = [
+			'page'            => 'Payroll',
+			'employees'       => $employees,
+			'paid_ids'        => $paid_ids,
+			'payroll_number'  => $period->payroll_number,
+			'unit'            => $period->unit,
+			'token_id'        => $period->token_id,
+			'qr_code'        => $period->qr_code,
+			'payroll_type'    => $period->payroll_type,
+			'period_id'       => $period->payroll_period_id,
+			'status'          => $period->status
+		];
+		$data['payrolls'] = $this->Get_model->getPayrollByPeriod($period_id);
+		$data['period'] = 'Mid-Year Bonus';
+		$this->load->view('template/admin_header');
+		$this->load->view('payroll/payroll_format/subsistence_allowance', $data);
 		$this->load->view('template/admin_footer');
 	}
 
@@ -343,6 +439,49 @@ class Payroll extends MY_Controller {
 			$this->pdf->render();
 			
 			$this->pdf->stream("MIDYEAR_BONUS_PAYROLL.pdf", ['Attachment' => 1]);
+		}
+	public function export_pdf_hazard($period_id) 
+		{
+			$this->load->library('pdf');
+    
+			$period  = $this->Get_model->get_period($period_id);
+			$payroll = $this->Get_model->getPayrollByPeriodHazard($period_id);
+
+			if (empty($payroll)) {
+				$this->session->set_flashdata('error', 'No records found.');
+				redirect($_SERVER['HTTP_REFERER']);
+			}
+
+			$allColumns = [];
+			foreach ($payroll as &$row) {
+				if (is_array($row)) {
+					$row = (object)$row; 
+				}
+				$row->parsed_deductions = []; 
+				if (!empty($row->less)) { 
+					$items = explode(',', $row->less);
+					foreach ($items as $item) {
+						$parts = explode(':', trim($item));
+						if (count($parts) == 2) {
+							$name   = trim($parts[0]);
+							$amount = (float) trim($parts[1]);
+							$row->parsed_deductions[$name] = $amount;
+							$allColumns[$name] = $name;
+						}
+					}
+				}
+			}
+			$data = [
+				'period'       => $period,
+				'payroll'      => $payroll, 
+				'otherColumns' => array_values($allColumns)
+			];
+			$html = $this->load->view('payroll/layout/hazard_pay.php', $data, true);
+			$this->pdf->loadHtml($html);
+			$this->pdf->setPaper([0, 0, 612, 936], 'landscape'); 
+			$this->pdf->render();
+			
+			$this->pdf->stream("HAZARD_PAY_{$period->payroll_number}.pdf.pdf", ['Attachment' => 1]);
 		}
 
 	public function run_ojt_honorarium($period_id)
@@ -526,7 +665,6 @@ class Payroll extends MY_Controller {
 	{
 		$emp_id = $this->input->post('employee_id');
 		$payroll_type = $this->input->post('payroll_type');
-
 		$salary = $this->Get_model->getEmployeeSalary($emp_id);
 		$loans  = $this->Get_model->getEmployeeLoans($emp_id, $payroll_type);
 
@@ -534,6 +672,7 @@ class Payroll extends MY_Controller {
 
 			'employee_id' => $emp_id,
 			'basic_salary'  => $salary->amount ?? 0,
+			'salary_grade'  => $salary->sg,
 			'loans'       => $loans
 		]);
 
@@ -627,7 +766,8 @@ class Payroll extends MY_Controller {
 				'total_deductions' => (float)$this->input->post('total_deductions'),
 				'net_pay'          => (float)$this->input->post('net_pay'),
 				'net_pay_first'    => (float)$this->input->post('net_pay_first'),
-				'net_pay_second'   => (float)$this->input->post('net_pay_second')
+				'net_pay_second'   => (float)$this->input->post('net_pay_second'),
+				'remarks'   	   => $this->input->post('lwop_remarks', TRUE)
 			];
 
 			$payroll_id = $this->Insert_model->insertPayroll($payrollData);
@@ -783,17 +923,7 @@ class Payroll extends MY_Controller {
 		);
 	}
 
-	// 2. Download Transmittal
-	public function export_transmittal_pdf_mid($period_id) {
-		$data['summary'] = $this->Get_model->get_midyear_summary($period_id);
-		$html = $this->load->view('payroll/reports/transmittal_pdf', $data, true);
-		
-		$this->pdf_library->generate($html, 'Transmittal_'.$period_id.'.pdf');
-	}
-
-	// 3. Generate Payslips (AJAX call)
 	public function generate_payslips_mid($period_id) {
-		// Logic to flag payslips as generated or pre-calculate values
 		$success = $this->Update_model->set_payslips_ready($period_id);
 		
 		if($success) {
@@ -803,60 +933,121 @@ class Payroll extends MY_Controller {
 		}
 	}
 
+	public function process_payslips($period_id)
+	{
+		$get_id = $this->Get_model->get_payroll_by_id($period_id);
+		if($get_id->payroll_type == 'GENERAL PAYROLL'){
+			$data = $this->Get_model->getPayrollByPeriod($period_id);
+		} elseif($get_id->payroll_type == 'MID-YEAR BONUS'){
+			$data = $this->Get_model->get_midyear_payroll($period_id);
+		} elseif($get_id->payroll_type == 'DAILY WAGE'){
+			$data = $this->Get_model->getPayrollByPeriodDW($period_id);
+		}elseif($get_id->payroll_type == 'CONTRACT OF SERVICE'){
+			$data = $this->Get_model->getPayrollByPeriodDW($period_id);
+		} elseif($get_id->payroll_type == 'HAZARD PAY'){
+			$data = $this->Get_model->getPayrollByPeriodHazard($period_id);
+		}else {
+			$data = [];
+		}
+		
+		if (empty($data)) {
+			echo json_encode(['status' => 'error', 'message' => 'No payroll records found.']);
+			return; 
+		}
+
+		echo json_encode(['status' => 'success', 'message' => 'Payslips have been generated successfully.']);
+	}
+
+	public function view_payslips($period_id)
+	{
+		$get_id = $this->Get_model->get_payroll_by_id($period_id);
+
+		if($get_id->payroll_type == 'GENERAL PAYROLL'){
+			$data['payrolls'] = $this->Get_model->getPayrollByPeriod($period_id);
+		} elseif($get_id->payroll_type == 'MID-YEAR BONUS'){
+			$data['payrolls'] = $this->Get_model->get_midyear_payroll($period_id);
+		} elseif($get_id->payroll_type == 'DAILY WAGE'){
+			$data['payrolls'] = $this->Get_model->getPayrollByPeriodDW($period_id);
+		}elseif($get_id->payroll_type == 'CONTRACT OF SERVICE'){
+			$data['payrolls'] = $this->Get_model->getPayrollByPeriodDW($period_id);
+		} elseif($get_id->payroll_type == 'HAZARD PAY'){
+			$data['payrolls'] = $this->Get_model->getPayrollByPeriodHazard($period_id);
+		} else {
+			$data['payrolls'] = [];
+		}
+		
+		if (empty($data['payrolls'])) {
+			show_error('No payroll records found.');
+			return;
+		}
+		if($get_id->payroll_type == 'GENERAL PAYROLL'){
+			$this->load->view('payroll/layout/payslips', $data);
+		} elseif($get_id->payroll_type == 'MID-YEAR BONUS'){
+			$this->load->view('payroll/layout/midpayslips', $data);
+		} elseif($get_id->payroll_type == 'DAILY WAGE'){
+			$this->load->view('payroll/layout/dwpayslips', $data);
+		}elseif($get_id->payroll_type == 'CONTRACT OF SERVICE'){
+			$this->load->view('payroll/layout/dwpayslips', $data);
+		}elseif($get_id->payroll_type == 'HAZARD PAY'){
+			$this->load->view('payroll/layout/hazardpayslips', $data);
+		} else {
+
+		}
+		
+	}
+
 	public function export_pdf_dw($period_id)
 	{
 		$this->load->library('pdf');
 
 		$period  = $this->Get_model->get_period($period_id);
 		$payroll = $this->Get_model->getPayrollByPeriodDW($period_id);
+		if (empty($payroll)) {
+			show_error('No daily wage records found for this period.', 404);
+		}
 
 		$allColumns = [];
-
-		// 🔥 PARSE deductions
 		foreach ($payroll as $row) {
-
 			$row->parsed_deductions = [];
 
 			if (!empty($row->other_deductions)) {
-
 				$items = explode(',', $row->other_deductions);
-
 				foreach ($items as $item) {
-
 					$parts = explode(':', trim($item));
-
+					
 					if (count($parts) == 2) {
 						$name   = trim($parts[0]);
 						$amount = (float) trim($parts[1]);
-
+						
 						$row->parsed_deductions[$name] = $amount;
-
-						// collect all unique deduction names
+						// Collect all unique deduction names
 						$allColumns[$name] = $name;
 					}
 				}
 			}
 		}
-
-		// convert to indexed array
 		$otherColumns = array_values($allColumns);
 
 		$data = [
-			'period'        => $period,
-			'payroll'       => $payroll,
-			'otherColumns'  => $otherColumns
+			'period'       => $period,
+			'payroll'      => $payroll,
+			'otherColumns' => $otherColumns
 		];
-
 		$html = $this->load->view('payroll/layout/daily_wage', $data, true);
-
 		$this->pdf->loadHtml($html);
-		$this->pdf->setPaper([0, 0, 612, 936], 'landscape'); // long bond
+		$this->pdf->setPaper([0, 0, 612, 936], 'landscape');
 		$this->pdf->render();
-
 		$this->pdf->stream(
-			"GENERAL_PAYROLL_{$period->date_period}.pdf",
+			"DAILY_WAGE_{$period->payroll_number}.pdf",
 			['Attachment' => true]
 		);
+	}
+
+	public function export_transmittal_pdf_mid($period_id) {
+		$data['summary'] = $this->Get_model->get_period($period_id);
+		$html = $this->load->view('payroll/layout/transmittal_pdf', $data, true);
+		
+		$this->pdf_library->generate($html, 'Transmittal_'.$period_id.'.pdf');
 	}
 
 	public function export_transmittal_pdf($period_id)
@@ -866,7 +1057,7 @@ class Payroll extends MY_Controller {
 		$code = $this->Get_model->get_payroll_by_id($period_id);
 		$data = [
 			'period'      => $period,
-			'qr_code'   => $code,
+			'qr_code'     => $code,
 			'prepared_by' => $this->session->userdata('name'), // optional
 			'date_today'  => date('Y-m-d')
 		];
@@ -875,7 +1066,7 @@ class Payroll extends MY_Controller {
 		$this->pdf->setPaper('A4', 'portrait'); // Transmittal usually portrait
 		$this->pdf->render();
 		$this->pdf->stream(
-			"TRANSMITTAL_{$period->date_period}.pdf",
+			"TRANSMITTAL_{$period->payroll_number}.pdf",
 			['Attachment' => true]
 		);
 	}
@@ -971,16 +1162,7 @@ class Payroll extends MY_Controller {
 		]);
 	}
 
-	public function payslips($period_id)
-	{
-		$data['payrolls'] = $this->Get_model->getPayrollByPeriod($period_id);
-
-		if (empty($data['payrolls'])) {
-			show_error('No payroll records found.');
-		}
-
-		$this->load->view('payroll/layout/payslips', $data);
-	}
+	
 	
 	public function generate_token() {
 		$chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
@@ -1442,18 +1624,13 @@ public function get_single_dw()
 	}
 
 	public function save_midyear_payroll() {
-    // 1. Capture and Clean Inputs
 		$employee_id = $this->input->post('employee_id');
 		$payroll_period_id = $this->input->post('payroll_period_id');
-		
-		// Convert to float to avoid DB "Incorrect decimal value" errors
 		$basic_salary = floatval(str_replace(',', '', $this->input->post('basic_salary')));
 		$gross_pay = floatval(str_replace(',', '', $this->input->post('gross_pay')));
 		$tax = floatval(str_replace(',', '', $this->input->post('tax')));
 		$total_deductions = floatval(str_replace(',', '', $this->input->post('total_deductions')));
 		$net_pay = floatval(str_replace(',', '', $this->input->post('net_pay')));
-
-		// 2. Process Loans (String concatenation for the 'less' column)
 		$loans = $this->input->post('loans');
 		$deductions_str = '';
 		if(!empty($loans) && is_array($loans)){
@@ -1500,6 +1677,60 @@ public function get_single_dw()
 			echo json_encode(['status'=>'error', 'message'=>'Database Insert Failed']);
 		}
 	}
+
+	public function save_hazard_payroll() {
+		$employee_id = $this->input->post('employee_id');
+		$payroll_period_id = $this->input->post('payroll_period_id');
+		$remarks = $this->input->post('remarks');
+		$basic_salary = floatval(str_replace(',', '', $this->input->post('basic_salary')));
+		$gross_pay = floatval(str_replace(',', '', $this->input->post('gross_pay')));
+		$tax = floatval(str_replace(',', '', $this->input->post('tax')));
+		$total_deductions = floatval(str_replace(',', '', $this->input->post('total_deductions')));
+		$net_pay = floatval(str_replace(',', '', $this->input->post('net_pay')));
+		$loans = $this->input->post('loans');
+		$deductions_str = '';
+		if(!empty($loans) && is_array($loans)){
+			$tmp = [];
+			foreach($loans as $loan){
+				$l_name = $loan['name'] ?? 'Loan';
+				$l_amount = floatval($loan['amount'] ?? 0);
+				if($l_amount > 0) {
+					$tmp[] = $l_name . ':' . $l_amount;
+				}
+			}
+			$deductions_str = implode(', ', $tmp);
+		}
+		$employee_details = $this->Get_model->getEmployeeName($employee_id);
+		if(!$employee_details) {
+			echo json_encode(['status'=>'error', 'message'=>'Employee not found']);
+			return;
+		}
+
+		$name = $employee_details->last_name . ', ' . $employee_details->name;
+		$position = $employee_details->position ?? 'N/A';
+
+		$data = [
+			'employee_id'       => $employee_id,
+			'payroll_period_id' => $payroll_period_id,
+			'name'              => $name,
+			'position'          => $position,
+			'basic_salary'      => $basic_salary,
+			'gross_pay'         => $gross_pay,
+			'total_deductions'  => $total_deductions,
+			'less'              => $deductions_str, 
+			'tax'               => $tax,
+			'net_pay'           => $net_pay,
+			'remarks'           => $remarks,
+			'created_at'        => date('Y-m-d H:i:s')
+		];
+
+		// 5. Execution
+		if($this->Insert_model->insert('tbl_py_hazard_pay', $data)) {
+			echo json_encode(['status'=>'success']);
+		} else {
+			echo json_encode(['status'=>'error', 'message'=>'Database Insert Failed']);
+		}
+	}
 	public function get_saved_midyear($period_id)
 	{
 		$records = $this->Get_model->get_midyear_payroll($period_id);
@@ -1509,6 +1740,15 @@ public function get_single_dw()
 			return;
 		}
 
+		echo json_encode($records);
+	}
+	public function get_saved_hazard($period_id)
+	{
+		$records = $this->Get_model->getPayrollByPeriodHazard($period_id);
+		if(!$records){
+			echo json_encode([]);
+			return;
+		}
 		echo json_encode($records);
 	}
 
@@ -1870,7 +2110,6 @@ public function get_single_dw()
 			'philhealth_no' => $philhealth_no
 		]);
 
-		// 4. Return Response
 		if ($updated) {
 			echo json_encode([
 				'status' => true,
@@ -1882,5 +2121,275 @@ public function get_single_dw()
 				'message' => 'Database error: Unable to update record.'
 			]);
 		}
+	}
+	public function add_admin_account()
+	{
+		// 1. Fetch POST data from the form
+		$name        = $this->input->post('name'); 
+		$m_name      = $this->input->post('m_name');
+		$l_name      = $this->input->post('l_name');
+		$email       = $this->input->post('email');
+		$password    = $this->input->post('password'); // Plain text password for the email
+		$user_type   = $this->input->post('user_type'); 
+		$classification   = 'Payroll'; 
+		$campus      = $this->input->post('campus');
+
+		// 2. Basic Validation
+		if(empty($name) || empty($l_name) || empty($email) || empty($password) || empty($user_type) || empty($campus)){
+			echo json_encode([
+				'status'  => false,
+				'message' => 'Please fill all required administrative fields.'
+			]);
+			return;
+		}
+
+		// 3. Duplication Check
+		$check_existing = $this->db->get_where('user', ['email' => $email])->row();
+		if($check_existing){
+			echo json_encode([
+				'status'  => false,
+				'message' => 'An account with this email already exists.'
+			]);
+			return;
+		}
+
+		// 4. Hash the password securely for the database
+		$hashed_password = password_hash($password, PASSWORD_BCRYPT);
+		
+		$admin_data = [
+			'name'           => $name,
+			'm_name'         => $m_name,
+			'l_name'         => $l_name,
+			'email'          => $email,
+			'classification' => 'Payroll', 
+			'user_type'      => $user_type,      
+			'campus'         => $campus,
+			'username'       => $email,      
+			'password'       => $hashed_password 
+		];
+
+		// 5. Execute Insert
+		$insert = $this->db->insert('user', $admin_data);
+
+		// 6. Return JSON response for SweetAlert
+		if($insert){
+			// Send the nicely formatted welcome email
+			$this->_send_admin_welcome_email($name, $email, $password, $user_type, $classification);
+
+			echo json_encode([
+				'status'  => true,
+				'message' => 'Admin account created successfully and welcome email sent.'
+			]);
+		} else {
+			echo json_encode([
+				'status'  => false,
+				'message' => 'Database error: Failed to create admin account.'
+			]);
+		}
+	}
+
+	private function _send_admin_welcome_email($name, $to_email, $plain_password, $user_type, $classification) 
+	{
+		$this->load->config('email');
+		$from = $this->config->item('smtp_user');
+		
+		$this->load->library('email');
+		
+		// Ensure email is sent as HTML
+		$config['mailtype'] = 'html';
+		$this->email->initialize($config);
+
+		$this->email->from($from, 'EVSU HRIS System');
+		$this->email->to($to_email);
+		$this->email->subject('Admin Account Registration Successful');
+
+		// Your EVSU HTML Template adapted for Admins
+		$message = "
+            <div style='background-color: #f4f7f9; padding: 40px 0; font-family: \"Segoe UI\", Tahoma, Geneva, Verdana, sans-serif;'>
+                <div style='max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.05); border: 1px solid #e1e8ed;'>
+                    
+                    <div style='background-color: #800000; padding: 30px; text-align: center;'>
+                        <h1 style='color: #ffffff; margin: 0; font-size: 24px; letter-spacing: 1px;'>EVSU HRIS PORTAL</h1>
+                        <p style='color: rgba(255,255,255,0.8); margin: 5px 0 0 0; font-size: 14px;'>Administrative Access Provisioned</p>
+                    </div>
+
+                    <div style='padding: 40px; line-height: 1.6; color: #333333;'>
+                        <h2 style='color: #111111; margin-top: 0;'>Account Successfully Created</h2>
+                        <p>Hello {$name},</p>
+                        <p>Welcome to the Eastern Visayas State University HRIS Portal. A <strong>{$classification}</strong> account has been successfully provisioned for you and is now ready for use.</p>
+                        
+                        <div style='background-color: #f8f9fa; border-left: 4px solid #800000; padding: 20px; margin: 25px 0;'>
+                            <p style='margin: 0 0 10px 0; font-weight: bold; color: #555;'>Access Credentials:</p>
+                            <table style='width: 100%; font-size: 15px;'>
+                                <tr>
+                                    <td style='padding: 5px 0; color: #777; width: 100px;'>Username (Email):</td>
+                                    <td style='padding: 5px 0; font-weight: bold;'>{$to_email}</td>
+                                </tr>
+                                <tr>
+                                    <td style='padding: 5px 0; color: #777;'>Password:</td>
+                                    <td style='padding: 5px 0; font-family: monospace; font-weight: bold; color: #d63384;'>{$plain_password}</td>
+                                </tr>
+                                <tr>
+                                    <td style='padding: 5px 0; color: #777;'>Access Level:</td>
+                                    <td style='padding: 5px 0; font-weight: bold; color: #800000;'>{$classification}</td>
+                                </tr>
+                            </table>
+                        </div>
+
+                        <p style='margin-bottom: 30px;'>For security purposes, we strongly recommend that you change your password immediately after your first successful login.</p>
+
+                        <div style='text-align: center;'>
+                            <a href='" . base_url() . "' style='background-color: #800000; color: #ffffff; padding: 15px 35px; text-decoration: none; border-radius: 50px; font-weight: bold; display: inline-block; box-shadow: 0 4px 6px rgba(128, 0, 0, 0.3);'>
+                                Login to Admin Portal
+                            </a>
+                        </div>
+                    </div>
+
+                    <div style='background-color: #fcfcfc; padding: 20px; text-align: center; border-top: 1px solid #eeeeee;'>
+                        <p style='font-size: 12px; color: #999999; margin: 0;'>
+                            &copy; " . date('Y') . " Eastern Visayas State University. All rights reserved.<br>
+                            This is an automated system notification. Please do not reply to this email.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        ";
+
+		$this->email->message($message);
+		return $this->email->send();
+	}
+	public function update_employee_loan()
+	{
+		// Fetch the primary key
+		$loan_id = $this->input->post('employee_loan_id');
+
+		// Gather updated data
+		$update_data = [
+			'employee_id'       => $this->input->post('employee_id'),
+			'amount'            => $this->input->post('amount'),
+			'monthly_deduction' => $this->input->post('monthly_deduction'),
+			'start_period'      => $this->input->post('start_period'),
+			'end_period'        => $this->input->post('end_period')
+		];
+
+		// Pass to model
+		$updated = $this->Update_model->update_employee_loan($loan_id, $update_data);
+
+		if ($updated) {
+			$this->session->set_flashdata('success', 'Deduction entry successfully updated.');
+		} else {
+			$this->session->set_flashdata('error', 'Failed to update the deduction entry.');
+		}
+
+		// Redirect back to the previous page
+		redirect($_SERVER['HTTP_REFERER']); 
+	}
+
+	public function delete_period($id = NULL)
+	{
+		if ($id === NULL) {
+			$this->session->set_flashdata('error', 'No payroll period ID provided for deletion.');
+			redirect($_SERVER['HTTP_REFERER'] ?? 'payroll'); 
+			return;
+		}
+		$deleted = $this->Update_model->delete_payroll_period($id);
+		if ($deleted) {
+			$this->session->set_flashdata('success', 'Payroll period successfully deleted.');
+		} else {
+			$this->session->set_flashdata('error', 'Database error: Failed to delete the payroll period.');
+		}
+		redirect($_SERVER['HTTP_REFERER'] ?? 'payroll');
+	}
+
+	public function email_batch_payslips()
+{
+    error_reporting(0); 
+
+    try {
+        $period_id = $this->input->post('period_id');
+
+        if (empty($period_id)) {
+            echo json_encode(['status' => 'error', 'message' => 'Invalid Payroll Period.']);
+            return;
+        }
+
+        $this->db->select("p.*, e.name, e.last_name, e.email");
+        $this->db->from('tbl_py_midyear_bonus p');
+        $this->db->join('tbl_employee e', 'e.employee_id = p.employee_id', 'left');
+        $this->db->where('p.payroll_period_id', $period_id);
+        $employees = $this->db->get()->result();
+
+        if (empty($employees)) {
+            echo json_encode(['status' => 'error', 'message' => 'No processed employees found for this batch.']);
+            return;
+        }
+        
+        $this->load->library('email');
+
+        $success_count = 0;
+        $failed_count  = 0;
+
+        foreach ($employees as $emp) {
+            if (empty($emp->email)) {
+                $failed_count++;
+                continue; 
+            }
+            $pdf_filepath = $this->_generate_individual_pdf($emp);
+            $this->email->clear(TRUE); 
+            $this->email->from('noreply.hris@evsu.edu.ph', 'EVSU HRIS Portal'); 
+            $this->email->to($emp->email);
+            $this->email->subject('EVSU E-Payslip: Midyear Bonus');
+            $email_body = $this->_get_payslip_email_template($emp);
+            $this->email->message($email_body);
+            $this->email->attach($pdf_filepath, 'attachment', 'EVSU_Payslip_' . $emp->last_name . '.pdf');
+            if ($this->email->send()) {
+                $success_count++;
+            } else {
+                $failed_count++;
+            }
+            if (file_exists($pdf_filepath)) {
+                unlink($pdf_filepath);
+            }
+        }
+
+        if ($success_count > 0 && $failed_count == 0) {
+            echo json_encode(['status' => 'success', 'message' => "Successfully sent $success_count payslip(s)!"]);
+        } else {
+            echo json_encode(['status' => 'warning', 'message' => "Sent $success_count, but $failed_count failed. Check email configs."]);
+        }
+
+    } catch (Throwable $e) {
+        // THIS IS THE MAGIC PART!
+        // If PHP crashes, it will send the exact error message to your SweetAlert.
+        echo json_encode([
+            'status' => 'error', 
+            'message' => 'PHP CRASH: ' . $e->getMessage() . ' in file ' . $e->getFile() . ' on line ' . $e->getLine()
+        ]);
+    }
+}
+
+
+
+	private function _generate_individual_pdf($employee_data)
+	{
+
+		$this->load->library('pdf');
+		$html = $this->load->view('payroll/layout/midpayslip', ['data' => $employee_data], TRUE);
+		$this->pdf->loadHtml($html);
+		$this->pdf->setPaper('A4', 'portrait');
+		$this->pdf->render();
+
+		$pdf_output = $this->pdf->output();
+		
+		$temp_dir = FCPATH . 'uploads/temp/';
+		if (!is_dir($temp_dir)) {
+			mkdir($temp_dir, 0777, TRUE);
+		}
+
+		$filename = 'payslip_' . $employee_data->employee_id . '_' . time() . '.pdf';
+		$filepath = $temp_dir . $filename;
+
+		file_put_contents($filepath, $pdf_output);
+		return $filepath;
 	}
 }

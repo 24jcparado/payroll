@@ -67,6 +67,14 @@
     .x-small { font-size: 0.75rem; }
     .btn-maroon { background-color: #6b0f1a; color: white; transition: 0.3s; }
     .btn-maroon:hover { background-color: #4a0a0b; color: white; transform: translateY(-2px); }
+    /* Ensure dropdowns break out of tables and sit on top of everything */
+.table-responsive {
+    overflow: visible !important; /* Allows dropdown to spill out of the table */
+}
+
+.dropdown-menu {
+    z-index: 9999 !important; /* Forces it above other cards/sticky elements */
+}
 </style>
 <?php 
 // Updated Workflow Steps based on your requirements
@@ -100,7 +108,7 @@ $current_month = date('m');
 
         <div class="row g-4">
             <div class="col-12 col-lg-9">
-                <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+                <div class="card border-0 shadow-sm rounded-4">
                     <div class="card-header bg-white border-0 pt-3">
                         <ul class="nav nav-pills nav-pills-custom" id="payrollTabs" role="tablist">
                             <li class="nav-item">
@@ -163,7 +171,7 @@ $current_month = date('m');
                                                 </td>
                                                 <td class="text-end pe-4">
                                                     <div class="dropdown">
-                                                        <button class="btn btn-light btn-sm rounded-circle" data-bs-toggle="dropdown"><i class="bi bi-three-dots-vertical"></i></button>
+                                                        <button class="btn btn-light btn-sm rounded-circle" data-bs-toggle="dropdown" data-bs-boundary="window"><i class="bi bi-three-dots-vertical"></i></button>
                                                         <ul class="dropdown-menu shadow border-0">
                                                             <li><a class="dropdown-item" href="<?= base_url('payroll/run/'.$row->payroll_period_id) ?>"><i class="bi bi-calculator me-2"></i> Run Process</a></li>
                                                             <li><a class="dropdown-item btn-edit-payroll" href="javascript:void(0);" data-id="<?= $row->payroll_period_id ?>" data-number="<?= $row->payroll_number ?>"><i class="bi bi-pencil me-2"></i> Edit</a></li>
@@ -207,7 +215,7 @@ $current_month = date('m');
                                                 </td>
                                                 <td><span class="text-success small fw-bold"><i class="bi bi-check-circle-fill me-1"></i> Processed</span></td>
                                                 <td class="text-end pe-4">
-                                                    <a href="<?= base_url('payroll/view/'.$row->payroll_period_id) ?>" class="btn btn-sm btn-light rounded-pill px-3">View Details</a>
+                                                    <a href="<?= base_url('payroll/run/'.$row->payroll_period_id) ?>" class="btn btn-sm btn-light rounded-pill px-3">View Details</a>
                                                 </td>
                                             </tr>
                                             <?php endforeach; else: ?>
@@ -278,6 +286,8 @@ $current_month = date('m');
                             <option value="GENERAL PAYROLL">GENERAL PAYROLL</option>
                             <option value="">--Special Payroll--</option>
                             <option value="MID-YEAR BONUS">MID-YEAR BONUS</option>
+                            <option value="SUBSISTENCE AND LAUNDRY ALLOWANCE">SUBSISTENCE AND LAUNDRY ALLOWANCE</option>
+                            <option value="HAZARD PAY">HAZARD PAY</option>
                             <option value="OJT HONORARIUM">OJT HONORARIUM</option>
                         </select>
                     </div>
@@ -675,9 +685,12 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 
 $(document).ready(function() {
+    
+    // Define your base URL so fetch knows where to go (adjust if needed)
+    const BASE_URL = "<?= base_url() ?>";
 
-    // Function to generate payroll number based on type
-    function generatePayrollNumber(payrollType) {
+    // 1. Add 'async' to the function so it can wait for the database
+    async function generatePayrollNumber(payrollType) {
         const now = new Date();
         const year = now.getFullYear();
         const month = String(now.getMonth() + 1).padStart(2, '0'); // 01-12
@@ -706,22 +719,50 @@ $(document).ready(function() {
             case 'OJT HONORARIUM':
                 prefix = 'OJTH';
                 break;
+            case 'HAZARD PAY':
+                prefix = 'HP';
+                break;
+             case 'SUBSISTENCE AND LAUNDRY ALLOWANCE':
+                prefix = 'SLA';
+                break;
             default:
                 prefix = 'PY';
         }
 
-        // Here you can fetch last sequence from backend if needed
-        // For demo, we just start with 00001
-        const sequence = '00001';
+        const basePattern = `${prefix}-${year}-${month}`;
 
-        return `${prefix}-${year}-${month}-${sequence}`;
+        try {
+            // 2. Fetch the sequence from your PHP controller
+            const response = await fetch(`${BASE_URL}payroll/getNextSequence?pattern=${basePattern}`);
+            
+            if (!response.ok) {
+                throw new Error('Network error');
+            }
+
+            const data = await response.json();
+            const sequence = data.nextSequence; // Your PHP should return this
+
+            // Return the dynamically generated number
+            return `${basePattern}-${sequence}`;
+            
+        } catch (error) {
+            console.error("Error fetching sequence:", error);
+            // Fallback in case the server is down
+            return `${basePattern}-ERROR`; 
+        }
     }
 
-    // On payroll type change
-    $('#payroll_type').on('change', function() {
+    // 3. Add 'async' to the change event, and 'await' to the function call
+    $('#payroll_type').on('change', async function() {
         const type = $(this).val();
+        
         if(type) {
-            const payrollNumber = generatePayrollNumber(type);
+            // Show a loading state so the user knows it's thinking
+            $('#payroll_number').val('Generating...');
+            
+            // Wait for the database to reply
+            const payrollNumber = await generatePayrollNumber(type);
+            
             $('#payroll_number').val(payrollNumber);
         } else {
             $('#payroll_number').val('');
@@ -776,5 +817,22 @@ document.querySelectorAll('#payroll_type, [name="unit"], [name="date_from"], [na
 .forEach(el => {
     el.addEventListener('change', generateParticulars);
 });
+
+function confirmDelete(id) {
+    Swal.fire({
+        title: 'Delete Payroll Period?',
+        text: "This action cannot be undone. All associated data may be affected.",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33', // Red color for deletion
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Yes, delete it!'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            // Redirect to the CodeIgniter controller to handle the deletion
+            window.location.href = "<?= base_url('payroll/delete_period/') ?>" + id;
+        }
+    });
+}
 </script>
 

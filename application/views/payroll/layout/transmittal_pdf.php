@@ -92,11 +92,21 @@ body {
         <td class="title">
             TRANSMITTAL FORM
         </td>
-        <td width="25%" style="text-align:right;">
-            <strong>Payroll No:</strong> __________<br>
-            <strong>Payroll Type:</strong> __________<br>
-            <strong>Unit:</strong> __________
-            
+        <td width="25%">
+            <table style="width: 100%; border-collapse: collapse;">
+                <tr>
+                    <td style="white-space: nowrap; font-size: 12px;"><strong>Payroll No:</strong></td>
+                    <td style="text-align: right; font-size: 8px;"><?=$qr_code->payroll_number?></td>
+                </tr>
+                <tr>
+                    <td style="white-space: nowrap; font-size: 12px;"><strong>Payroll Type:</strong></td>
+                    <td style="text-align: right; font-size: 8px;"><?=$qr_code->payroll_type?></td>
+                </tr>
+                <tr>
+                    <td style="white-space: nowrap; font-size: 12px;"><strong>Unit:</strong></td>
+                    <td style="text-align: right; font-size: 8px;"><?=$qr_code->unit?></td>
+                </tr>
+            </table>
         </td>
     </tr>
 </table>

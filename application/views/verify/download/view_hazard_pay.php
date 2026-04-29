@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title><?= $period ?? 'Payroll View' ?></title>
+<title><?= $period ?? 'Hazard Payroll View' ?></title>
 
 <link rel="icon" type="image/png" sizes="16x16" href="<?= base_url('assets/img/favicon.png') ?>">
 
@@ -23,7 +23,7 @@
     }
     #mainContent {
         padding: 2rem;
-        max-width: 1800px; /* Widened to accommodate Quincena columns */
+        max-width: 1600px; 
         margin: 0 auto;
     }
 
@@ -130,8 +130,8 @@
         white-space: nowrap;
     }
     .table-custom .font-monospace {
-        font-size: 1.1rem !important; /* Bumps up the size of the numbers */
-        letter-spacing: 0.5px; /* Adds a tiny bit of breathing room between digits */
+        font-size: 1.1rem !important; 
+        letter-spacing: 0.5px; 
     }
     
     .table-custom tfoot .font-monospace {
@@ -170,7 +170,7 @@
         transform: translateY(-1px);
     }
     
-    /* Custom Scrollbar for wide tables */
+    /* Custom Scrollbar */
     .table-responsive::-webkit-scrollbar {
         height: 8px;
     }
@@ -195,7 +195,7 @@
         </div>
         <div class="text-center text-md-end">
             <div class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 px-4 py-2 rounded-pill mb-2 fs-6 text-uppercase">
-                <?= $payroll_type ?? 'General Payroll' ?>
+                <?= $payroll_type ?? 'Hazard Pay' ?>
             </div>
             <p class="mb-0 text-secondary fw-medium"><i class="bi bi-diagram-3-fill me-2"></i>Unit: <span class="text-dark fw-bold"><?= $unit ?? 'N/A' ?></span></p>
         </div>
@@ -237,7 +237,7 @@
 
     <div class="table-container">
         <div class="d-flex justify-content-between align-items-center p-4 border-bottom">
-            <h6 class="fw-bold mb-0 text-dark"><i class="bi bi-table text-primary me-2"></i><?=$payroll_type?> Payroll Register</h6>
+            <h6 class="fw-bold mb-0 text-dark"><i class="bi bi-table text-primary me-2"></i><?= $payroll_type ?? 'Hazard Pay' ?> Register</h6>
             <div>
                 <button class="btn btn-sm btn-outline-secondary rounded-pill px-3 hover-elevate me-2">
                     <i class="bi bi-download me-1"></i> Export
@@ -253,8 +253,8 @@
         $deduction_names = [];
         if (!empty($payrolls)) {
             foreach ($payrolls as $payroll) {
-                // Force to object just in case
-                $p = (object) $payroll; 
+                // Support both arrays and objects
+                $p = is_array($payroll) ? (object) $payroll : $payroll; 
                 if (!empty($p->less)) {
                     $items = explode(',', $p->less);
                     foreach ($items as $item) {
@@ -279,7 +279,7 @@
 
             if (!empty($payrolls)) {
                 foreach ($payrolls as $payroll) {
-                    $p = (object) $payroll; // Force object syntax
+                    $p = is_array($payroll) ? (object) $payroll : $payroll;
 
                     $total_basic += (float) ($p->basic_salary ?? 0);
                     $total_bonus += (float) ($p->gross_pay ?? 0);
@@ -308,20 +308,14 @@
                 <thead class="sticky-top">
                     <tr>
                         <th rowspan="2" class="ps-4 border-end">Employee Information</th>
-                        <th colspan="4" class="text-center border-end text-success">Earnings</th>
-                        <th colspan="<?= count($deduction_names) + 5 ?>" class="text-center border-end text-danger">Deductions</th>
-                        <th colspan="3" class="text-center border-end text-primary">Net Pay</th>
+                        <th colspan="2" class="text-center border-end text-success">Earnings</th>
+                        <th colspan="<?= count($deduction_names) + 2 ?>" class="text-center border-end text-danger">Deductions</th>
+                        <th rowspan="2" class="text-center border-end text-primary">Total Net Pay</th>
                         <th rowspan="2" class="text-center pe-4">Action</th>
                     </tr>
                     <tr>
-                        <th class="text-end col-earnings">Basic</th>
-                        <th class="text-end col-earnings">Sal. LWOP</th>
-                        <th class="text-end col-earnings">PERA LWOP</th>
-                        <th class="text-end border-end col-earnings text-success">Gross Pay</th>
-                        
-                        <th class="text-end col-deductions">GSIS</th>
-                        <th class="text-end col-deductions">PhilHealth</th>
-                        <th class="text-end col-deductions">Pag-IBIG</th>
+                        <th class="text-end col-earnings">Basic Salary</th>
+                        <th class="text-end border-end col-earnings text-success">Gross Hazard Pay</th>
                         
                         <?php foreach ($deduction_names as $d): ?>
                             <th class="text-end col-deductions opacity-75" style="font-size: 0.7rem;"><?= htmlspecialchars($d) ?></th>
@@ -329,17 +323,13 @@
                         
                         <th class="text-end col-deductions">W/ Tax</th>
                         <th class="text-end border-end col-deductions text-danger">Total Ded.</th>
-                        
-                        <th class="text-end text-primary">Total Net</th>
-                        <th class="text-end text-muted">1st Quin.</th>
-                        <th class="text-end border-end text-muted">2nd Quin.</th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php if(!empty($payrolls)): ?>
                         <?php foreach ($payrolls as $payroll): ?> 
                         <?php 
-                            $p = (object) $payroll; // Force object syntax safely
+                            $p = is_array($payroll) ? (object) $payroll : $payroll; 
                             
                             $less_values = [];
                             if (!empty($p->less)) {
@@ -359,13 +349,13 @@
                             </td>
                             
                             <td class="text-end font-monospace col-earnings">₱ <?= number_format((float)($p->basic_salary ?? 0), 2) ?></td>
-                            <td class="text-end font-monospace col-earnings text-danger"><?= !empty($p->salary_lwop) && (float)$p->salary_lwop > 0 ? '- ₱ '.number_format((float)$p->salary_lwop, 2) : '<span class="opacity-25 text-muted">0.00</span>' ?></td>
-                            <td class="text-end font-monospace col-earnings text-danger"><?= !empty($p->pera) && (float)$p->pera > 0 ? '- ₱ '.number_format((float)$p->pera, 2) : '<span class="opacity-25 text-muted">0.00</span>' ?></td>
-                            <td class="text-end border-end font-monospace fw-semibold text-success amount-accrued col-earnings">₱ <?= number_format((float)($p->gross_pay ?? 0), 2) ?></td>
-                            
-                            <td class="text-end font-monospace col-deductions gsis">₱ <?= number_format((float)($p->gsis ?? 0), 2) ?></td>
-                            <td class="text-end font-monospace col-deductions philhealth">₱ <?= number_format((float)($p->philhealth ?? 0), 2) ?></td>
-                            <td class="text-end font-monospace col-deductions pagibig">₱ <?= number_format((float)($p->pagibig ?? 0), 2) ?></td>
+                            <td class="text-end border-end font-monospace fw-semibold text-success amount-accrued col-earnings">
+                                ₱ <?= number_format((float)($p->gross_pay ?? 0), 2) ?>
+                                <br>
+                                <small class="text-muted fw-normal" style="font-family: system-ui, -apple-system, sans-serif; font-size: 0.7rem; letter-spacing: normal;">
+                                    <?= htmlspecialchars($p->remarks ?? '') ?>
+                                </small>
+                            </td>
                             
                             <?php foreach ($deduction_names as $d): ?>
                                 <td class="text-end font-monospace col-deductions text-muted"> 
@@ -376,9 +366,7 @@
                             <td class="text-end font-monospace col-deductions tax">₱ <?= number_format((float)($p->tax ?? 0), 2) ?></td>
                             <td class="text-end border-end font-monospace fw-semibold text-danger tax-amount col-deductions">₱ <?= number_format((float)($p->total_deductions ?? 0), 2) ?></td>
                             
-                            <td class="text-end font-monospace fw-bold text-primary netpay">₱ <?= number_format((float)($p->net_pay ?? 0), 2) ?></td>
-                            <td class="text-end font-monospace text-muted">₱ <?= number_format((float)($p->net_pay_first ?? 0), 2) ?></td>
-                            <td class="text-end font-monospace text-muted border-end">₱ <?= number_format((float)($p->net_pay_second ?? 0), 2) ?></td>
+                            <td class="text-end border-end font-monospace fw-bold text-primary netpay" style="font-size: 1.25rem;">₱ <?= number_format((float)($p->net_pay ?? 0), 2) ?></td>
 
                             <td class="text-center pe-4">
                                 <button type="button" 
@@ -396,7 +384,7 @@
                         <?php endforeach; ?>
                     <?php else: ?>
                         <tr>
-                            <td colspan="<?= 10 + count($deduction_names) ?>" class="text-center py-5 text-muted">No payroll records found.</td>
+                            <td colspan="<?= 6 + count($deduction_names) ?>" class="text-center py-5 text-muted">No payroll records found.</td>
                         </tr>
                     <?php endif; ?>
                 </tbody>
@@ -404,25 +392,17 @@
                     <tr>
                         <td class="text-end ps-4 border-end pe-3 fw-bold">GRAND TOTAL</td>
                         
-                        <td class="text-end font-monospace"></td>
-                        <td class="text-end font-monospace"></td>
-                        <td class="text-end font-monospace"></td>
-                        <td class="text-end border-end font-monospace fw-bold text-success" id="total_amount_accrued">₱ 0.00</td>
-                        
-                        <td class="text-end font-monospace" id="total_gsis">₱ 0.00</td>
-                        <td class="text-end font-monospace" id="total_philhealth">₱ 0.00</td>
-                        <td class="text-end font-monospace" id="total_pagibig">₱ 0.00</td>
+                        <td class="text-end font-monospace text-muted">₱ <?= number_format($total_basic, 2) ?></td>
+                        <td class="text-end border-end font-monospace fw-bold text-success" id="total_amount_accrued">₱ <?= number_format($total_bonus, 2) ?></td>
                         
                         <?php foreach ($deduction_names as $d): ?>
                             <td class="text-end font-monospace text-muted">₱ <?= number_format($deduction_totals[$d], 2) ?></td>
                         <?php endforeach ?>
                         
-                        <td class="text-end font-monospace" id="total_tax">₱ 0.00</td>
-                        <td class="text-end border-end font-monospace fw-bold text-danger" id="total_deductions_all">₱ 0.00</td>
+                        <td class="text-end font-monospace" id="total_tax">₱ <?= number_format($total_tax, 2) ?></td>
+                        <td class="text-end border-end font-monospace fw-bold text-danger" id="total_deductions_all">₱ <?= number_format($total_deductions, 2) ?></td>
                         
-                        <td class="text-end font-monospace text-primary fs-6 fw-bold" id="total_netpay">₱ 0.00</td>
-                        <td></td>
-                        <td class="border-end"></td>
+                        <td class="text-end border-end font-monospace text-primary fs-5 fw-bold" id="total_netpay">₱ <?= number_format($total_net, 2) ?></td>
                         <td class="pe-4"></td>
                     </tr>
                 </tfoot>
@@ -478,7 +458,7 @@
 </div>
 
 <script>
-    // Initialize tooltips for the "Other Deductions" and "Edit" icons
+    // Initialize tooltips
     var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
     var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
       return new bootstrap.Tooltip(tooltipTriggerEl)
@@ -497,35 +477,24 @@
         });
     }
 
-    // Dynamic Totals Calculator
+    // Dynamic Totals Calculator (Re-written for Hazard Pay columns)
     function updateTotals() {
-        let totalGSIS = 0,
-            totalPhilhealth = 0,
-            totalPagibig = 0,
-            totalTax = 0,
+        let totalTax = 0,
             totalAccrued = 0,
             totalDedAll = 0,
             totalNetPay = 0;
 
         document.querySelectorAll('#savedPayrollTable tbody tr').forEach(row => {
-            if(!row.querySelector('.gsis')) return; // Skip if no data
+            if(!row.querySelector('.tax')) return; // Skip if empty row
 
-            totalGSIS += parsePeso(row.querySelector('.gsis').textContent);
-            totalPhilhealth += parsePeso(row.querySelector('.philhealth').textContent);
-            totalPagibig += parsePeso(row.querySelector('.pagibig').textContent);
             totalTax += parsePeso(row.querySelector('.tax').textContent);
-            
             totalAccrued += parsePeso(row.querySelector('.amount-accrued').textContent);
             totalDedAll += parsePeso(row.querySelector('.tax-amount').textContent);
             totalNetPay += parsePeso(row.querySelector('.netpay').textContent);
         });
 
         // Apply formatted totals to the footer
-        document.getElementById('total_gsis').textContent = formatPeso(totalGSIS);
-        document.getElementById('total_philhealth').textContent = formatPeso(totalPhilhealth);
-        document.getElementById('total_pagibig').textContent = formatPeso(totalPagibig);
         document.getElementById('total_tax').textContent = formatPeso(totalTax);
-        
         document.getElementById('total_amount_accrued').textContent = formatPeso(totalAccrued);
         document.getElementById('total_deductions_all').textContent = formatPeso(totalDedAll);
         document.getElementById('total_netpay').textContent = formatPeso(totalNetPay);
@@ -536,24 +505,17 @@
 
     // --- MODAL FUNCTIONS ---
     function openEditModal(button) {
-        // Extract data from the button's data-* attributes
         const id = $(button).data('id');
         const name = $(button).data('name');
         
-        // Populate the modal
         $('#editRowId').val(id);
         $('#editEmpName').val(name);
         
-        // Show the modal
         const editModal = new bootstrap.Modal(document.getElementById('editRowModal'));
         editModal.show();
     }
 
     function saveRowChanges() {
-        // Here you would grab the form data and send it to your CodeIgniter controller via AJAX
-        // const formData = $('#editPayrollForm').serialize();
-
-        // Simulate success with SweetAlert
         $('#editRowModal').modal('hide');
         
         Swal.fire({
@@ -562,9 +524,6 @@
             text: 'The payroll entry has been updated.',
             showConfirmButton: false,
             timer: 1500
-        }).then(() => {
-            // Optional: reload the page or update the table row dynamically
-            // location.reload();
         });
     }
 </script>

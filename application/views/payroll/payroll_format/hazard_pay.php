@@ -47,83 +47,49 @@
         <div class="card border-0 shadow-sm rounded-4 mb-4">
             <div class="card-body pt-5">
                 <div class="stepper-wrapper">
-                    <!-- Step 1: HR Draft -->
-                    <div class="stepper-item <?= ($status > 1) ? 'completed' : (($status == 1) ? 'current' : '') ?>" id="step-1">
-                        <div class="step-counter">1</div>
-                        <div class="step-name">HR Draft</div>
-                    </div>
-                    
-                    <!-- Step 2: Admin -->
-                    <div class="stepper-item <?= ($status > 2) ? 'completed' : (($status == 2) ? 'current' : '') ?>" id="step-2">
-                        <div class="step-counter">2</div>
-                        <div class="step-name">Admin</div>
-                    </div>
-                    
-                    <!-- Step 3: Budget -->
-                    <div class="stepper-item <?= ($status > 3) ? 'completed' : (($status == 3) ? 'current' : '') ?>" id="step-3">
-                        <div class="step-counter">3</div>
-                        <div class="step-name">Budget</div>
-                    </div>
-                    
-                    <!-- Step 4: Accounting -->
-                    <div class="stepper-item <?= ($status > 4) ? 'completed' : (($status == 4) ? 'current' : '') ?>" id="step-4">
-                        <div class="step-counter">4</div>
-                        <div class="step-name">Accounting</div>
-                    </div>
-                    
-                    <!-- Step 5: VP Approval -->
-                    <div class="stepper-item <?= ($status > 5) ? 'completed' : (($status == 5) ? 'current' : '') ?>" id="step-5">
-                        <div class="step-counter">5</div>
-                        <div class="step-name">VP Approval</div>
-                    </div>
-                    
-                    <!-- Step 6: Cashier -->
-                    <div class="stepper-item <?= ($status > 6) ? 'completed' : (($status == 6) ? 'current' : '') ?>" id="step-6">
-                        <div class="step-counter">6</div>
-                            <div class="step-name">Cashier
-                        </div>
-                    </div>
+                    <div class="stepper-item <?= ($status >= 1) ? 'completed' : 'current' ?>" id="step-1"><div class="step-counter">1</div><div class="step-name">HR Draft</div></div>
+                    <div class="stepper-item <?= ($status >= 2) ? 'completed' : ($status == 1 ? '' : 'current') ?>" id="step-2"><div class="step-counter">2</div><div class="step-name">Admin</div></div>
+                    <div class="stepper-item" id="step-3"><div class="step-counter">3</div><div class="step-name">Budget</div></div>
+                    <div class="stepper-item" id="step-4"><div class="step-counter">4</div><div class="step-name">Accounting</div></div>
+                    <div class="stepper-item" id="step-5"><div class="step-counter">5</div><div class="step-name">VP Approval</div></div>
+                    <div class="stepper-item" id="step-6"><div class="step-counter">6</div><div class="step-name">Cashier</div></div>
                 </div>
-                <!-- Step 7 Completion Alert & Email Action -->
             </div>
         </div>
-
-         <?php if($status >= 7): ?>
-            <div class="alert mb-4 mb-0 border-0 rounded-4 shadow-sm" style="background-color: #f0fdf4; border-left: 5px solid #10b981 !important;">
-                <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
-                    <div class="d-flex align-items-center">
-                        <div class="bg-success bg-opacity-10 p-3 rounded-circle me-3">
-                            <i class="bi bi-check-circle-fill text-success fs-3"></i>
-                        </div>
-                        <div>
-                            <h5 class="mb-1 fw-bold text-dark">Payroll Processing Complete</h5>
-                            <p class="mb-0 text-muted small">All approval stages are finished. You may now distribute the electronic payslips to the employees.</p>
-                        </div>
-                    </div>
-                    <div>
-                        <button type="button" class="btn btn-success fw-bold px-4 py-2 rounded-pill shadow-sm" id="btnEmailPayslips" data-period_id="<?= $period_id ?>">
-                            <i class="bi bi-envelope-paper-fill me-2"></i> Email E-Payslips
-                        </button>
-                    </div>
-                </div>
-            </div>
-        <?php endif; ?>
 
         <div class="row g-4">
             <div class="col-xl-4 col-lg-5">
                 <div class="card border-0 shadow-sm rounded-4 border-top border-primary border-4">
                     <div class="card-header bg-white border-0 py-3">
-                        <h6 class="mb-0 fw-bold">Bonus Computation</h6>
+                        <h6 class="mb-0 fw-bold">Hazard Computation</h6>
                     </div>
                     <div class="card-body">
                         <div class="mb-3">
                             <label class="ledger-label">Employee Selection</label>
+                             <?php 
+                                usort($employees, function($a, $b) {
+                                    $lastNameComparison = strcasecmp(trim($a->last_name), trim($b->last_name));
+                                
+                                    if ($lastNameComparison === 0) {
+                                        return strcasecmp(trim($a->name), trim($b->name));
+                                    }
+                                    return $lastNameComparison;
+                                });
+                            ?>
+
                             <select id="employee_select" class="form-select border-2">
                                 <option value="">-- Select Employee --</option>
                                 <?php foreach ($employees as $row): ?>
                                     <?php if (!in_array($row->employee_id, $paid_ids)): ?>
                                         <option value="<?= $row->employee_id ?>">
-                                            <?= htmlspecialchars($row->name . ' ' . $row->last_name) ?> (SG-<?= $row->sg ?>)
+                                            <?php 
+                                                $lastName = trim($row->last_name);
+                                                $firstName = trim($row->name); 
+                                                $middleName = !empty($row->middle_name) ? ' ' . trim($row->middle_name) : '';
+                                                $extension = !empty($row->ext) ? ' ' . trim($row->ext) : '';
+                                                $fullName = $lastName . ', ' . $firstName . $middleName . $extension;
+                                            ?>
+                                            <?= htmlspecialchars($fullName) ?> (SG-<?= htmlspecialchars($row->sg) ?> STEP-<?= htmlspecialchars($row->step) ?>)
                                         </option>
                                     <?php endif; ?>
                                 <?php endforeach; ?>
@@ -141,10 +107,12 @@
                                     <div class="amount-input-group readonly-money">
                                         <span class="currency-symbol">₱</span>
                                         <input type="text" id="basic_salary" name="basic_salary" class="money-field" readonly>
+                                        <input type="hidden" id="salary_grade">
+                                        <input type="hidden" id="remarks" name="remarks">
                                     </div>
                                 </div>
                                 <div class="col-12">
-                                    <span class="ledger-label">Gross Mid-Year Bonus</span>
+                                    <span class="ledger-label">Gross Amount</span>
                                     <div class="amount-input-group" style="border: 2px solid #3b82f6;">
                                         <span class="currency-symbol" style="background:#eff6ff; color:#3b82f6;">₱</span>
                                         <input type="text" id="gross_pay" name="gross_pay" class="money-field text-primary fw-bold" readonly>
@@ -167,12 +135,12 @@
 
                             <div class="section-title-custom bg-summary mb-3">Summary</div>
                             <div class="net-pay-highlight mb-4">
-                                <span class="ledger-label text-success">Net Bonus Amount</span>
+                                <span class="ledger-label text-success">Net Hazard Pay Amount</span>
                                 <input type="text" id="net_pay" name="net_pay" class="money-field net-pay-amount fw-bold" readonly>
                             </div>
 
                             <button type="submit" class="btn btn-primary w-100 py-3 rounded-3 shadow-lg fw-bold fs-5">
-                                <i class="bi bi-shield-check me-2"></i> Save Bonus Entry
+                                <i class="bi bi-shield-check me-2"></i> Save Entry
                             </button>
                         </form>
                     </div>
@@ -259,13 +227,13 @@
 
                 <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
                     <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
-                        <h6 class="mb-0 fw-bold">Bonus Registry</h6>
+                        <h6 class="mb-0 fw-bold">Hazard Pay</h6>
                         <div class="dropdown">
                             <button class="btn btn-light btn-sm border rounded-pill px-3 dropdown-toggle shadow-sm" data-bs-toggle="dropdown">
                                 <i class="bi bi-download me-1 text-primary"></i> Operations
                             </button>
                             <ul class="dropdown-menu dropdown-menu-end shadow border-0 p-2">
-                                <li><a class="dropdown-item py-2" href="#" id="btnPrint" data-url="<?= base_url('payroll/export_pdf_mid/'.$period_id) ?>">
+                                <li><a class="dropdown-item py-2" href="#" id="btnPrint" data-url="<?= base_url('payroll/export_pdf_hazard/'.$period_id) ?>">
                                     <i class="bi bi-file-pdf me-2 text-danger"></i>Download Payroll PDF
                                 </a></li>
                                 <li><a class="dropdown-item py-2" href="<?= base_url('payroll/export_transmittal_pdf/'. $period_id) ?>">
@@ -289,14 +257,6 @@
                         <div class="table-responsive">
                             <table class="table table-hover align-middle mb-0" id="savedPayrollTable">
                                 <thead class="table-light">
-                                    <tr class="x-small text-muted text-uppercase">
-                                        <th class="ps-4">Name</th>
-                                        <th>Position</th>
-                                        <th class="text-end">Basic</th>
-                                        <th class="text-end">Bonus</th>
-                                        <th class="text-end">Deductions</th>
-                                        <th class="text-end pe-4">Net Pay</th>
-                                    </tr>
                                 </thead>
                                 <tbody></tbody>
                             </table>
@@ -338,7 +298,9 @@ $('#employee_select').on('change', function () {
     function (res) {
         $('#employee_id').val(res.employee_id);
         let basic = parseFloat(res.basic_salary) || 0;
+        let sg = parseFloat(res.salary_grade) || 0;
         $('#basic_salary').val(basic.toFixed(2));
+         $('#salary_grade').val(sg.toFixed(2));
         EMPLOYEE_LOANS = res.loans || [];
         renderOtherDeductions(EMPLOYEE_LOANS);
         computePayroll();
@@ -441,19 +403,53 @@ function renderOtherDeductions(loans){
 
 function computePayroll() {
     let basic = parseFloat($('#basic_salary').val()) || 0;
-    let midyear_bonus = basic * MIDYEAR_MONTHS;
+    let salary_grade = parseInt($('#salary_grade').val()) || 0; 
+    let percentage = getHazardPayPercentage(salary_grade);
+
+    let hazard_pay = basic * percentage;
+    let gross = hazard_pay; 
+    
     let tax = parseFloat($('#tax').val()) || 0;
     let loan_total = 0;
     $('.loan-input').each(function() {
         loan_total += parseFloat($(this).val()) || 0;
-    });
+    })
     let total_deductions = round2(tax + loan_total);
-    let net = round2(midyear_bonus - total_deductions);
-    $('#gross_pay').val(midyear_bonus.toFixed(2));
+    let net = round2(gross - total_deductions);
+    
+    // Update the UI
+    $('#gross_pay').val(gross.toFixed(2));
     $('#total_deductions').val(total_deductions.toFixed(2));
     $('#net_pay').val(net.toFixed(2));
-    $('#total_gross_pay').text("₱ " + formatMoney(midyear_bonus));
+    
+    $('#total_gross_pay').text("₱ " + formatMoney(gross));
     $('#total_deduction').text("₱ " + formatMoney(total_deductions));
+
+    let displayPercentage = (percentage * 100).toFixed(0); 
+    
+    if (percentage > 0) {
+        $('#remarks').val(`${displayPercentage}% of the basic salary`);
+    } else {
+        $('#remarks').val(''); 
+    }
+}
+
+function getHazardPayPercentage(sg) {
+    sg = parseInt(sg) || 0;
+    
+    if (sg > 0 && sg <= 19) return 0.25;
+    if (sg === 20) return 0.15;
+    if (sg === 21) return 0.13;
+    if (sg === 22) return 0.12;
+    if (sg === 23) return 0.11;
+    if (sg === 24 || sg === 25) return 0.10;
+    if (sg === 26) return 0.09;
+    if (sg === 27) return 0.08;
+    if (sg === 28) return 0.07;
+    if (sg === 29 || sg === 30) return 0.06;
+    if (sg >= 31) return 0.05;
+    
+    return 0; // Default if no valid SG is found
 }
 
 
@@ -477,7 +473,6 @@ $(document).on('keyup change', '.loan-input', function(){
 $('#payrollForm').on('submit', function(e) {
     e.preventDefault();
 
-    // Safety function: returns "0" if the field is empty/undefined
     const getCleanVal = (id) => {
         let el = document.getElementById(id);
         return (el && el.value) ? el.value.replace(/,/g, '') : '0';
@@ -488,8 +483,6 @@ $('#payrollForm').on('submit', function(e) {
         Swal.fire('Wait!', 'Please select an employee first.', 'warning');
         return;
     }
-
-    // Update fields with "clean" numbers before sending to PHP
     $('#basic_salary').val(getCleanVal('basic_salary'));
     $('#gross_pay').val(getCleanVal('gross_pay'));
     $('#tax').val(getCleanVal('tax'));
@@ -497,7 +490,7 @@ $('#payrollForm').on('submit', function(e) {
     $('#net_pay').val(getCleanVal('net_pay'));
 
    $.ajax({
-        url: "<?= base_url('payroll/save_midyear_payroll') ?>",
+        url: "<?= base_url('payroll/save_hazard_payroll') ?>",
         type: "POST",
         data: $(this).serialize(),
         dataType: "json",
@@ -505,45 +498,20 @@ $('#payrollForm').on('submit', function(e) {
             if (res.status === 'success') {
                 const currentId = $('#employee_id').val();
                 const $select = $('#employee_select');
-                
-                // 1. Find the NEXT option in the list after the current one
                 const $currentOption = $select.find(`option[value="${currentId}"]`);
-                const $nextOption = $currentOption.nextAll('option').filter(function() {
-                    return $(this).val() !== "";
-                }).first();
 
-                // 2. Prepare the Alert message
-                let alertTitle = 'Entry Saved!';
-                let alertText = 'The payroll record has been added.';
-                let confirmText = 'OK';
-
-                if ($nextOption.length > 0) {
-                    const nextName = $nextOption.text().trim();
-                    alertText = `Payroll saved. Next up: <strong>${nextName}</strong>`;
-                    confirmText = `Process ${nextName}`;
-                } else {
-                    alertText = 'All employees in this unit have been processed.';
-                    confirmText = 'Finish Batch';
-                }
-
-                // 3. Display the Alert with the name and Button
                 Swal.fire({
-                    title: alertTitle,
-                    html: alertText, // using 'html' allows the bold tags
+                    title: 'Entry Saved!',
+                    text: 'The payroll record has been added.',
                     icon: 'success',
-                    confirmButtonColor: '#6b0f1a', // Using your maroon theme
-                    confirmButtonText: confirmText,
+                    confirmButtonColor: '#6b0f1a', 
+                    confirmButtonText: 'OK',
                     allowOutsideClick: false
                 }).then((result) => {
                     if (result.isConfirmed) {
-                        // 4. Remove processed employee
                         $currentOption.remove();
-                        
-                        // 5. Load the next one
                         resetPayrollForm();
-                        autoSelectNext(); 
-                        
-                        // 6. Refresh summary table
+                        $select.val("").trigger('change'); 
                         loadSavedPayroll();
                     }
                 });
@@ -553,22 +521,7 @@ $('#payrollForm').on('submit', function(e) {
         }
     });
 });
-function autoSelectNext() {
-    const $select = $('#employee_select');
-    
-    // Find the first valid option remaining
-    const firstAvailable = $select.find('option').filter(function() {
-        return $(this).val() !== "";
-    }).first();
 
-    if (firstAvailable.length > 0) {
-        $select.val(firstAvailable.val()).trigger('change');
-    } else {
-        // Fallback if the list is empty
-        $select.val("").trigger('change');
-    }
-}
-// Helper: Reset payroll form
 function resetPayrollForm() {
     $('#employee_id').val('');
     $('#basic_salary').val('');
@@ -580,35 +533,13 @@ function resetPayrollForm() {
     EMPLOYEE_LOANS = [];
 }
 
-// Helper: Select next employee and trigger change
-function selectNextEmployee() {
-    const $select = $('#employee_select');
-    let currentIndex = $select.prop('selectedIndex');
-    const total = $select.find('option').length;
-
-    let nextIndex = currentIndex;
-
-    while (++nextIndex < total) {
-        let option = $select.find('option').eq(nextIndex);
-        if (option.val() !== "") {
-            $select.prop('selectedIndex', nextIndex).trigger('change');
-            return;
-        }
-    }
-
-    // No more employees
-    alert('All employees have been processed.');
-    $select.prop('selectedIndex', 0);
-}
-
-
 /* ===============================
     LOAD SAVED PAYROLL TABLE
 ================================ */
 
 function loadSavedPayroll(){
 
-    $.get("<?= base_url('payroll/get_saved_midyear/'.$period_id) ?>",
+    $.get("<?= base_url('payroll/get_saved_hazard/'.$period_id) ?>",
     function(res){
 
         const tbody = $('#savedPayrollTable tbody');
@@ -652,13 +583,12 @@ function loadSavedPayroll(){
         // Build header
         let header1 = `
         <tr>
-            <th rowspan="2">NAME</th>
-            <th rowspan="2">POSITION</th>
-            <th rowspan="2">BASIC PAY</th>
-            <th rowspan="2">MIDYEAR BONUS</th>
-            <th colspan="${deductionNames.length}">LESS</th>
-            <th rowspan="2">TAX</th>
-            <th rowspan="2">NET PAY</th>
+            <th>NAME</th>
+            <th>POSITION</th>
+            <th>BASIC PAY</th>
+            <th>AMOUNT ACCRUED</th>
+            <th>TAX</th>
+            <th>NET DUE</th>
         </tr>`;
 
         let header2 = `<tr>`;
@@ -669,7 +599,6 @@ function loadSavedPayroll(){
 
         thead.html(header1 + header2);
 
-        // Render rows
         res.forEach(function(row){
 
             let gross = parseFloat(row.gross_pay) || 0;
@@ -697,19 +626,13 @@ function loadSavedPayroll(){
             <tr>
                 <td>${row.name}</td>
                 <td>${row.position}</td>
-                <td class="text-end">₱ ${formatMoney(row.basic_salary)}</td>
-                <td class="text-end">₱ ${formatMoney(gross)}</td>
-            `;
-
-            deductionNames.forEach(function(name){
-                let val = lessMap[name] ? formatMoney(lessMap[name]) : '';
-                tr += `<td class="text-end">${val}</td>`;
-            });
-
-            tr += `
-                <td class="text-end">₱ ${formatMoney(tax)}</td>
-                <td class="text-end fw-bold">₱ ${formatMoney(net)}</td>
-            </tr>
+                <td>₱ ${formatMoney(row.basic_salary)}</td>
+                <td>
+                    ₱ ${formatMoney(gross)} <br>
+                    <small class="text-muted">${row.remarks}</small>
+                </td>
+                <td>₱ ${formatMoney(tax)}</td>
+                <td>₱ ${formatMoney(net)}</td>
             `;
 
             tbody.append(tr);
@@ -720,17 +643,17 @@ function loadSavedPayroll(){
         let totalRow = `
         <tfoot>
         <tr class="fw-bold table-light">
-            <td colspan="3" class="text-end">TOTAL</td>
-            <td class="text-end">₱ ${formatMoney(gross_total)}</td>
+            <td colspan="3" class="text-center">TOTAL</td>
+            <td>₱ ${formatMoney(gross_total)}</td>
         `;
 
         deductionNames.forEach(function(name){
-            totalRow += `<td class="text-end">₱ ${formatMoney(deductionTotals[name])}</td>`;
+            totalRow += `<td>₱ ${formatMoney(deductionTotals[name])}</td>`;
         });
 
         totalRow += `
-            <td class="text-end">₱ ${formatMoney(tax_total)}</td>
-            <td class="text-end">₱ ${formatMoney(net_total)}</td>
+            <td>₱ ${formatMoney(tax_total)}</td>
+            <td>₱ ${formatMoney(net_total)}</td>
         </tr>
         </tfoot>
         `;
@@ -790,9 +713,7 @@ $(document).on('click', '.submit_payroll', function () {
                 },
                 dataType: "json",
                 success: function (res) {
-
                     if (res.status === 'success') {
-
                         Swal.fire({
                             title: 'Submitted!',
                             text: 'Payroll submitted successfully.',
@@ -801,32 +722,24 @@ $(document).on('click', '.submit_payroll', function () {
                         }).then(() => {
                             location.reload();
                         });
-
                     } else {
-
                         Swal.fire({
                             title: 'Error',
                             text: 'Something went wrong.',
                             icon: 'error'
                         });
-
                     }
                 },
                 error: function () {
-
                     Swal.fire({
                         title: 'Server Error',
                         text: 'Unable to process request.',
                         icon: 'error'
                     });
-
                 }
             });
-
         }
-
     });
-
 });
 
 $(document).ready(function () {
@@ -862,14 +775,9 @@ $(document).ready(function() {
                     title: 'Processing...',
                     didOpen: () => { Swal.showLoading() }
                 });
-
-                // 1. Call the backend to process the data (expects JSON)
                 $.post("<?= base_url('payroll/process_payslips/') ?>" + period_id, function(res) {
                     if(res.status === 'success') {
-                        
-                        // 2. Show success message
                         Swal.fire('Success!', res.message, 'success').then(() => {
-                            // 3. AFTER they click OK, open the layout in a new tab
                             window.open("<?= base_url('payroll/view_payslips/') ?>" + period_id, '_blank');
                         });
 
@@ -881,76 +789,14 @@ $(document).ready(function() {
         });
     };
 });
-
-/* ===============================
-    EMAIL E-PAYSLIPS TO EMPLOYEES
-================================ */
-
-$(document).on('click', '#btnEmailPayslips', function() {
-    let period_id = $(this).attr('data-period_id');
-    if (!period_id) {
-        Swal.fire('Error', 'Period ID is missing from the button!', 'error');
-        return;
-    }
-    Swal.fire({
-        title: 'Send E-Payslips?',
-        html: "This will automatically generate and email the PDF payslips to all <strong>processed employees</strong> in this batch.",
-        icon: 'question',
-        showCancelButton: true,
-        confirmButtonColor: '#10b981', // Match the success green
-        cancelButtonColor: '#6c757d',
-        confirmButtonText: '<i class="bi bi-send-fill me-1"></i> Yes, send them now!',
-        cancelButtonText: 'Wait, cancel'
-    }).then((result) => {
-        if (result.isConfirmed) {
-            
-            // Show a persistent loading state since emailing can take time
-            Swal.fire({
-                title: 'Sending Emails...',
-                html: 'Please do not close this window. This may take a moment depending on the batch size.',
-                allowOutsideClick: false,
-                allowEscapeKey: false,
-                didOpen: () => {
-                    Swal.showLoading()
-                }
-            });
-
-            // Send the request to your controller
-            $.ajax({
-                url: "<?= base_url('payroll/email_batch_payslips') ?>",
-                type: "POST",
-                data: { 
-                    period_id: period_id,
-                    '<?= $this->security->get_csrf_token_name() ?>': '<?= $this->security->get_csrf_hash() ?>'
-                 },
-                dataType: "json",
-                success: function(res) {
-                    if (res.status === 'success') {
-                        Swal.fire({
-                            title: 'Success!',
-                            text: res.message || 'All payslips have been successfully dispatched.',
-                            icon: 'success',
-                            confirmButtonColor: '#10b981'
-                        });
-                    } else {
-                        Swal.fire({
-                            title: 'Warning',
-                            text: res.message || 'The process finished, but some emails may have failed. Please check the logs.',
-                            icon: 'warning'
-                        });
-                    }
-                },
-                error: function() {
-                    Swal.fire({
-                        title: 'Server Error',
-                        text: 'Unable to communicate with the mail server. Please try again later.',
-                        icon: 'error'
-                    });
-                }
-            });
-        }
+$(document).ready(function() {
+    $('#employee_select').select2({
+        placeholder: "-- Select Employee --",
+        allowClear: true
     });
 });
 
 </script>
+
+
 

@@ -87,8 +87,22 @@ if (!empty($deduction)) {
                                         </td>
                                         <td><?= $statusLabel ?></td>
                                         <td class="text-end pe-4">
+                                            <!-- Edit Button -->
+                                            <button class="btn btn-sm btn-light border rounded-circle shadow-sm text-primary me-1 edit-btn" 
+                                                data-id="<?= $row->employee_loan_id ?>"
+                                                data-employee="<?= $row->employee_id ?>"
+                                                data-amount="<?= $row->amount ?>"
+                                                data-monthly="<?= $row->monthly_deduction ?>"
+                                                data-start="<?= $row->start_period ?>"
+                                                data-end="<?= $row->end_period ?>"
+                                                title="Edit Entry">
+                                                <i class="bi bi-pencil"></i>
+                                            </button>
+
+                                            <!-- Delete Button -->
                                             <button class="btn btn-sm btn-light border rounded-circle shadow-sm text-danger" 
-                                                    onclick="confirmDelete(<?= $row->employee_loan_id ?>)">
+                                                onclick="confirmDelete(<?= $row->employee_loan_id ?>)"
+                                                title="Delete Entry">
                                                 <i class="bi bi-trash"></i>
                                             </button>
                                         </td>
@@ -200,22 +214,110 @@ if (!empty($deduction)) {
         </form>
     </div>
 </div>
+<!-- Edit Deduction Modal -->
+<div class="modal fade" id="editFundModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <form action="<?= base_url('payroll/update_employee_loan') ?>" method="POST" class="w-100">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header bg-maroon text-white">
+                    <h6 class="modal-title fw-bold"><i class="bi bi-pencil-square me-2"></i>Edit Deduction Entry</h6>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    
+                    <!-- Hidden ID field for the database update -->
+                    <input type="hidden" name="employee_loan_id" id="edit_loan_id">
+
+                    <div class="mb-3">
+                        <label class="form-label x-small fw-bold text-muted text-uppercase">1. Select Employee</label>
+                        <select name="employee_id" id="edit_employee_id" class="form-control" required>
+                            <option value="">-- Search Employee Name --</option>
+                            <?php foreach($employees as $emp): ?>
+                                <option value="<?= $emp->employee_id ?>">
+                                    <?= strtoupper($emp->last_name . ', ' . $emp->name) ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label x-small fw-bold text-muted text-uppercase">2. Total Amount</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light text-muted small">₱</span>
+                                <input type="number" name="amount" id="edit_amount" class="form-control" step="0.01" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label x-small fw-bold text-muted text-uppercase">3. Monthly Rate</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light text-muted small">₱</span>
+                                <input type="number" name="monthly_deduction" id="edit_monthly" class="form-control" step="0.01" required>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label x-small fw-bold text-muted text-uppercase">4. Start Period</label>
+                            <input type="date" name="start_period" id="edit_start" class="form-control" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label x-small fw-bold text-muted text-uppercase">5. End Period</label>
+                            <input type="date" name="end_period" id="edit_end" class="form-control" required>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light border-0">
+                    <button type="button" class="btn btn-link text-muted text-decoration-none" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-maroon px-4 rounded-pill shadow-sm">Update Entry</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
 
 <script>
 $(document).ready(function() {
     // DataTable
-    $('#periodTable').DataTable({
+    let table = $('#periodTable').DataTable({
         pageLength: 10, 
         order: [[0, 'asc']],
         responsive: true,
         language: { search: "", searchPlaceholder: "Search records..." }
     });
 
-    // Select2
+    // Select2 for Add Modal
     $('#employee_id').select2({
         dropdownParent: $('#addFundModal'),
         width: '100%',
         placeholder: "-- Search Employee Name --"
+    });
+
+    // Initialize Select2 for Edit Modal
+    $('#edit_employee_id').select2({
+        dropdownParent: $('#editFundModal'),
+        width: '100%',
+        placeholder: "-- Search Employee Name --"
+    });
+
+    // CRITICAL FIX: Use Event Delegation for the Edit Button
+    // This ensures the button works on Page 2+ and after searching
+    $('#periodTable tbody').on('click', '.edit-btn', function() {
+        let btn = $(this);
+        
+        // Grab data from the clicked button
+        $('#edit_loan_id').val(btn.data('id'));
+        $('#edit_amount').val(btn.data('amount'));
+        $('#edit_monthly').val(btn.data('monthly'));
+        $('#edit_start').val(btn.data('start'));
+        $('#edit_end').val(btn.data('end'));
+        
+        // Set Select2 value and trigger change so it updates visually
+        $('#edit_employee_id').val(btn.data('employee')).trigger('change');
+        
+        // Show the modal
+        $('#editFundModal').modal('show');
     });
 });
 

@@ -160,13 +160,30 @@
                     <div class="card-body">
                         <div class="mb-3">
                             <label class="form-label small fw-bold text-muted text-uppercase">Employee</label>
+                            <?php 
+                                usort($employees, function($a, $b) {
+                                    $lastNameComparison = strcasecmp(trim($a->last_name), trim($b->last_name));
+                                
+                                    if ($lastNameComparison === 0) {
+                                        return strcasecmp(trim($a->name), trim($b->name));
+                                    }
+                                    return $lastNameComparison;
+                                });
+                            ?>
+
                             <select id="employee_select" class="form-select border-2">
                                 <option value="">-- Select Employee --</option>
                                 <?php foreach ($employees as $row): ?>
                                     <?php if (!in_array($row->employee_id, $paid_ids)): ?>
                                         <option value="<?= $row->employee_id ?>">
-                                            <?= htmlspecialchars($row->name . ' ' . $row->last_name) ?>
-                                            (SG-<?= $row->sg ?> STEP-<?= $row->step ?>)
+                                            <?php 
+                                                $lastName = trim($row->last_name);
+                                                $firstName = trim($row->name); 
+                                                $middleName = !empty($row->middle_name) ? ' ' . trim($row->middle_name) : '';
+                                                $extension = !empty($row->ext) ? ' ' . trim($row->ext) : '';
+                                                $fullName = $lastName . ', ' . $firstName . $middleName . $extension;
+                                            ?>
+                                            <?= htmlspecialchars($fullName) ?> (SG-<?= htmlspecialchars($row->sg) ?> STEP-<?= htmlspecialchars($row->step) ?>)
                                         </option>
                                     <?php endif; ?>
                                 <?php endforeach; ?>
@@ -200,6 +217,11 @@
                                         <input type="text" id="salary_lwop" name="salary_lwop" class="money-field readonly-field" readonly>
                                     </div>
                                 </div>
+
+                                <div class="col-12 mt-3" id="lwop_remarks_container" style="display: none;">
+                                        <label for="lwop_remarks" class="form-label fw-semibold text-danger">Remarks / Reason for LWOP</label>
+                                        <textarea id="lwop_remarks" name="lwop_remarks" class="form-control border-2" rows="2" placeholder="Please specify the reason for Leave Without Pay..."></textarea>
+                                    </div>
 
                                 <div class="col-12">
                                     <span class="ledger-label">PERA (Adjusted for LWOP)</span>
@@ -454,7 +476,6 @@ $(document).ready(function() {
     // 2. Load Table
     loadPayroll(<?= $period_id ?>);
 
-    // 3. Form Submission RESTORED
     $('#payrollForm').on('submit', function(e){
         e.preventDefault();
         const payrollId = $('#payroll_id').val();
@@ -472,16 +493,15 @@ $(document).ready(function() {
                     location.reload(); 
                 });
             } else {
-                // RESTORED: Auto-Next Logic
                 const $select = $('#employee_select');
                 let currentIndex = $select.prop('selectedIndex');
                 $select.find('option[value="'+res.employee_id+'"]').remove();
-                
                 const totalOptions = $select.find('option').length;
                 if (currentIndex >= totalOptions) currentIndex = totalOptions - 1;
-
                 $('#payrollForm')[0].reset();
                 $('#loan-deductions-container').empty();
+                $('#lwop_remarks_container').hide();
+                $('#lwop_remarks').prop('required', false).val('');
                 $('#payroll_id').val('');
 
                 if (totalOptions > 1) {
@@ -725,7 +745,58 @@ $(document).on('click', '.submit_payroll', function (e) {
     });
 });
 
+$(document).ready(function() {
+    $('#btnPrint').on('click', function(e) {
+        e.preventDefault();
+        const url = $(this).data('url');
+        window.open(url, '_blank'); // Opens PDF in new tab
+    });
+    window.generatePayslips = function(period_id) {
+        Swal.fire({
+            title: 'Generate Payslips?',
+            text: "This will prepare individual payslips for all processed employees.",
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#198754',
+            confirmButtonText: 'Yes, Generate'
+        }).then((result) => {
+            if (result.isConfirmed) {
+
+                Swal.fire({
+                    title: 'Processing...',
+                    didOpen: () => { Swal.showLoading() }
+                });
+
+                $.post("<?= base_url('payroll/process_payslips/') ?>" + period_id, function(res) {
+                    if(res.status === 'success') {
+                        
+                        // 2. Show success message
+                        Swal.fire('Success!', res.message, 'success').then(() => {
+                            // 3. AFTER they click OK, open the layout in a new tab
+                            window.open("<?= base_url('payroll/view_payslips/') ?>" + period_id, '_blank');
+                        });
+
+                    } else {
+                        Swal.fire('Error', res.message, 'error');
+                    }
+                }, 'json');
+            }
+        });
+    };
+});
+
 function round2(num) { return Math.round((num + Number.EPSILON) * 100) / 100; }
 document.getElementById('btnPrint').addEventListener('click', function () { window.open(this.getAttribute('data-url'), '_blank'); });
-function generatePayslips(id) { window.open("<?= base_url('payroll/payslips/') ?>" + id, "_blank"); }
+
+$('#lwop_days').on('input', function() {
+    const lwopValue = parseFloat($(this).val());
+    if (!isNaN(lwopValue) && lwopValue > 0) {
+        $('#lwop_remarks_container').slideDown(200);
+        $('#lwop_remarks').prop('required', true); 
+    } else {
+        $('#lwop_remarks_container').slideUp(200);
+        $('#lwop_remarks').prop('required', false).val('');
+    }
+});
+
 </script>

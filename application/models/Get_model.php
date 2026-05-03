@@ -14,6 +14,21 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                         ->get('user')
                         ->result_array();
         }
+        // In Get_model.php
+        public function get_live_payroll_periods() {
+            $query = $this->db->select('*')
+                            ->from('tbl_py_payroll_period')
+                            ->order_by('payroll_period_id', 'DESC') // Using your actual primary key
+                            ->limit(5)
+                            ->get();
+                            
+            // Safe check to prevent crashes if the query ever fails
+            if (!$query) {
+                return []; 
+            }
+            
+            return $query->result_array();
+        }
 
 		public function generate_payroll_number()
             {
@@ -346,6 +361,20 @@ defined('BASEPATH') OR exit('No direct script access allowed');
             ->get()
             ->result_array(); 
         }
+    
+        public function getPayrollByPeriodSubsistence($period_id) {
+            $this->db->select('s.*, p.date_period, p.payroll_type');
+            $this->db->from('tbl_py_subsistence s');
+            $this->db->join('tbl_py_payroll_period p', 'p.payroll_period_id = s.payroll_period_id');
+            $this->db->where('s.payroll_period_id', $period_id);
+            $this->db->order_by('s.name', 'ASC');
+            
+            $query = $this->db->get();
+            
+            // Return result as array to be compatible with your process_payslips logic
+            return $query->result_array();
+        }
+
 
         public function getPayrollByPeriodOJT($payroll_period_id)
         {
@@ -715,4 +744,37 @@ defined('BASEPATH') OR exit('No direct script access allowed');
             return false;
         }
 
+        public function save_subsistence_record($data) {
+            $this->db->where('payroll_period_id', $data['payroll_period_id']);
+            $this->db->where('employee_id', $data['employee_id']);
+            
+            $existing_record = $this->db->get('tbl_py_subsistence')->row();
+
+            if ($existing_record) {
+                // Update existing record using the exact primary key
+                $this->db->where('subsistence_id', $existing_record->subsistence_id);
+                
+                unset($data['created_at']); 
+                $data['updated_at'] = date('Y-m-d H:i:s');
+                
+                return $this->db->update('tbl_py_subsistence', $data);
+            } else {
+                // Insert new record
+                return $this->db->insert('tbl_py_subsistence', $data);
+            }
+        }
+
+        public function get_saved_subsistence_records($period_id) {
+            // Because your table already has `name` and `position` saved, no JOIN is needed!
+            $this->db->where('payroll_period_id', $period_id);
+            $this->db->order_by('name', 'ASC'); 
+            
+            $query = $this->db->get('tbl_py_subsistence');
+            
+            if (!$query) {
+                return []; 
+            }
+            
+            return $query->result_array();
+        }
     }

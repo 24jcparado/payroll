@@ -70,7 +70,8 @@
                 <div class="card border-0 shadow-sm h-100 kpi-card">
                     <div class="card-body p-3">
                         <small class="text-uppercase text-muted fw-bold x-small">Next Payout</small>
-                        <h3 class="fw-bold text-primary mb-0">Apr 30</h3>
+                        <!-- Added ID for live update -->
+                        <h3 class="fw-bold text-primary mb-0" id="liveNextPayout">--</h3>
                     </div>
                 </div>
             </div>
@@ -120,7 +121,11 @@
 
         <div class="card border-0 shadow-sm rounded-4">
             <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center">
-                <h6 class="mb-0 fw-bold"><i class="bi bi-clock-history text-primary me-2"></i>Recent Logs</h6>
+                <h6 class="mb-0 fw-bold">
+                    <i class="bi bi-clock-history text-primary me-2"></i>Active Payroll Periods
+                    <!-- Added a pulsing indicator so users know it's a live view -->
+                    <span class="badge bg-danger ms-2 rounded-pill shadow-sm" style="animation: pulse 2s infinite;">LIVE</span>
+                </h6>
                 <button class="btn btn-sm btn-dark rounded-pill px-3">View All</button>
             </div>
             <div class="card-body p-0">
@@ -128,27 +133,17 @@
                     <table class="table table-hover align-middle mb-0" style="min-width: 700px;">
                         <thead class="bg-light">
                             <tr class="x-small text-uppercase text-muted">
-                                <th class="ps-4">Employee</th>
-                                <th>Period</th>
-                                <th>Net Pay</th>
+                                <th class="ps-4">Period Date</th>
+                                <th>Payout Date</th>
+                                <th>Total Net Pay</th>
                                 <th>Status</th>
                                 <th class="text-end pe-4">Action</th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <!-- Added ID here to target with jQuery -->
+                        <tbody id="livePayrollTableBody">
                             <tr>
-                                <td class="ps-4">
-                                    <div class="d-flex align-items-center">
-                                        <div class="bg-info text-white rounded-circle me-2 text-center" style="width:30px; height:30px; line-height:30px; font-size:10px;">JD</div>
-                                        <div class="small fw-bold">Juan Dela Cruz</div>
-                                    </div>
-                                </td>
-                                <td class="small">April 1-15</td>
-                                <td class="fw-bold text-dark small">₱45,000.00</td>
-                                <td><span class="badge bg-success-subtle text-success rounded-pill px-3" style="font-size:0.65rem;">Approved</span></td>
-                                <td class="text-end pe-4">
-                                    <button class="btn btn-sm btn-light border"><i class="bi bi-printer"></i></button>
-                                </td>
+                                <td colspan="5" class="text-center py-4 text-muted">Loading live data...</td>
                             </tr>
                         </tbody>
                     </table>
@@ -157,3 +152,146 @@
         </div>
     </div>
 </main>
+
+<!-- CSS for the Live Pulse Indicator -->
+<style>
+    @keyframes pulse {
+        0% { opacity: 1; }
+        50% { opacity: 0.5; }
+        100% { opacity: 1; }
+    }
+</style>
+
+<!-- AJAX Script to fetch live data -->
+<script>
+$(document).ready(function() {
+
+    // ==========================================
+    // 1. LIVE DASHBOARD TABLE POLLING
+    // ==========================================
+    function fetchLiveDashboard() {
+        $.ajax({
+            // Note: Adjust 'dashboard' below to match your actual CodeIgniter controller name
+            url: '<?= base_url("payroll/fetch_live_dashboard_data") ?>', 
+            type: 'GET',
+            dataType: 'json',
+            success: function(response) {
+                if(response.success) {
+                    
+                    // Update the Next Payout KPI Card
+                    $('#liveNextPayout').text(response.next_payout);
+
+                    let rowsHtml = '';
+                    
+                    if(response.periods && response.periods.length > 0) {
+                        $.each(response.periods, function(index, period) {
+                            
+                            // Map numeric status (1-6) to Text and Badge Colors
+                            let statusNum = parseInt(period.status);
+                            let statusText = 'Unknown';
+                            let badgeClass = 'bg-light text-dark'; 
+
+                            switch (statusNum) {
+                                case 1:
+                                    statusText = 'HR Draft';
+                                    badgeClass = 'bg-secondary-subtle text-secondary';
+                                    break;
+                                case 2:
+                                    statusText = 'Admin';
+                                    badgeClass = 'bg-info-subtle text-info';
+                                    break;
+                                case 3:
+                                    statusText = 'Budget';
+                                    badgeClass = 'bg-warning-subtle text-warning';
+                                    break;
+                                case 4:
+                                    statusText = 'Accounting';
+                                    badgeClass = 'bg-primary-subtle text-primary';
+                                    break;
+                                case 5:
+                                    statusText = 'VP Approval';
+                                    badgeClass = 'bg-dark-subtle text-dark';
+                                    break;
+                                case 6:
+                                    statusText = 'Cashier';
+                                    badgeClass = 'bg-success-subtle text-success';
+                                    break;
+                            }
+
+                            // USING YOUR EXACT SCHEMA COLUMNS NOW
+                            let periodStr = period.date_period || 'Unspecified';
+                            let particulars = period.particulars || 'Regular Payroll';
+                            
+                            // Format currency using 'net_amount'
+                            let rawNetPay = parseFloat(period.net_amount || 0);
+                            let netPay = rawNetPay.toLocaleString('en-PH', { style: 'currency', currency: 'PHP' });
+
+                            // Build the HTML row using 'payroll_period_id' for the view link
+                            rowsHtml += `
+                                <tr>
+                                    <td class="ps-4 fw-bold small">${periodStr}</td>
+                                    <td class="small text-muted">${particulars}</td>
+                                    <td class="fw-bold text-dark small">${netPay}</td>
+                                    <td><span class="badge ${badgeClass} rounded-pill px-3" style="font-size:0.65rem;">${statusText}</span></td>
+                                    <td class="text-end pe-4">
+                                        <a href="<?= base_url('payroll/run/') ?>${period.payroll_period_id}" class="btn btn-sm btn-light border shadow-sm"><i class="bi bi-eye"></i></a>
+                                    </td>
+                                </tr>
+                            `;
+                        });
+                    } else {
+                        // Display if table is empty
+                        rowsHtml = `<tr><td colspan="5" class="text-center py-4 text-muted"><i class="bi bi-inbox fs-4 d-block mb-2"></i>No active payroll periods found.</td></tr>`;
+                    }
+
+                    // Inject the compiled rows into the table body
+                    $('#livePayrollTableBody').html(rowsHtml);
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error("Dashboard Sync Error:", error);
+                // Only show error message if the table is empty to prevent flashing on temporary network drops
+                if ($('#livePayrollTableBody tr').length <= 1) {
+                    $('#livePayrollTableBody').html('<tr><td colspan="5" class="text-center py-4 text-danger"><i class="bi bi-exclamation-triangle me-2"></i>Data sync error. Retrying...</td></tr>');
+                }
+            }
+        });
+    }
+
+    // Run immediately when the page loads
+    fetchLiveDashboard();
+
+    // Set auto-refresh interval (15000ms = 15 seconds)
+    setInterval(fetchLiveDashboard, 15000);
+
+
+    // ==========================================
+    // 2. DYNAMIC WORKFLOW STEPPER CONTROLLER
+    // ==========================================
+    // Call this function and pass a number (1-6) to update the UI
+    window.updateStepperUI = function(currentStatus) {
+        
+        // Remove active/completed classes from all steps first to reset
+        $('.stepper-item').removeClass('active completed'); 
+
+        // Loop through each step in the HTML
+        $('.stepper-item').each(function() {
+            // Extract the number from the ID (e.g., "step-3" becomes 3)
+            let stepNum = parseInt($(this).attr('id').split('-')[1]);
+            
+            if (stepNum < currentStatus) {
+                // If the step is lower than current status, mark as done
+                $(this).addClass('completed'); 
+            } else if (stepNum === currentStatus) {
+                // If it matches exactly, mark as active
+                $(this).addClass('active'); 
+            }
+        });
+    };
+
+    // If your stepper is on the same page and you want to initialize it on load with a specific value:
+    // let activeWorkflowStatus = 3; 
+    // updateStepperUI(activeWorkflowStatus);
+
+});
+</script>

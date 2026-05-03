@@ -112,4 +112,10 @@ defined('BASEPATH') OR exit('No direct script access allowed');
             return $this->db->affected_rows() > 0;
         }
 
+        public function update_employee_data($employee_id, $update_data) {
+        $this->db->where('employee_id', $employee_id);
+        
+        return $this->db->update('tbl_employee', $update_data);
+    }
+
     }

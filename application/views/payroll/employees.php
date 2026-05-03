@@ -350,7 +350,14 @@
                                             </td>
                                             <td class="text-muted small"><?= $row->assignment ?></td>
                                             <td class="text-center">
-                                                <button class="btn btn-sm btn-light border action-btn me-1" title="Edit Record">
+                                                <button type="button" 
+                                                        class="btn btn-sm btn-light border action-btn me-1 edit-btn" 
+                                                        title="Edit Record"
+                                                        data-id="<?= isset($row->employee_id) ? $row->employee_id : '' ?>"
+                                                        data-name="<?= htmlspecialchars($row->name . ' ' . $row->last_name) ?>"
+                                                        data-sg="<?= htmlspecialchars($row->sg) ?>"
+                                                        data-step="<?= htmlspecialchars($row->step) ?>"
+                                                        data-tax="<?= htmlspecialchars($row->tax_rate) ?>">
                                                     <i class="bi bi-pencil-square text-primary"></i>
                                                 </button>
                                                 <button class="btn btn-sm btn-light border action-btn" title="Delete Record">
@@ -368,6 +375,54 @@
         </div>
     </div>
 </main> 
+<!-- Edit Employee Details Modal -->
+<div class="modal fade" id="editEmployeeModal" tabindex="-1" aria-labelledby="editEmployeeModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow" style="border-radius: 16px;">
+            <div class="modal-header bg-white border-bottom" style="border-radius: 16px 16px 0 0;">
+                <h6 class="modal-title fw-bold text-dark m-0" id="editEmployeeModalLabel">
+                    <i class="bi bi-pencil-square me-2 text-primary"></i>Edit Payroll Details
+                </h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <?= form_open('payroll/update_employee_data', ['id' => 'editEmployeeForm']) ?>
+                <div class="modal-body p-4 bg-light">
+                    <input type="hidden" id="editEmpId" name="employee_id">
+                    <div class="mb-4">
+                        <label class="form-label small text-muted fw-bold text-uppercase">Employee</label>
+                        <input type="text" class="form-control border-0 shadow-sm text-secondary fw-bold" id="editEmpName" readonly style="background: #e2e8f0;">
+                    </div>
+                    
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label small text-muted fw-bold text-uppercase">Salary Grade</label>
+                            <input type="number" class="form-control shadow-sm" id="editSG" name="sg" required min="1">
+                        </div>
+                        
+                        <!-- Editable: Step -->
+                        <div class="col-md-4">
+                            <label class="form-label small text-muted fw-bold text-uppercase">Step</label>
+                            <input type="number" class="form-control shadow-sm" id="editStep" name="step" required min="1">
+                        </div>
+                        
+                        <!-- Editable: Tax Rate -->
+                        <div class="col-md-4">
+                            <label class="form-label small text-muted fw-bold text-uppercase">Tax Rate</label>
+                            <div class="input-group shadow-sm rounded">
+                                <input type="number" step="0.01" class="form-control border-end-0" id="editTaxRate" name="tax_rate" required min="0">
+                                <span class="input-group-text bg-white text-muted border-start-0">%</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-white border-top" style="border-radius: 0 0 16px 16px;">
+                    <button type="button" class="btn btn-light border" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary px-4 fw-bold shadow-sm">Save Changes</button>
+                </div>
+            <?php form_close();?>
+        </div>
+    </div>
+</div>
 
 <script>
 $(document).ready(function(){
@@ -455,4 +510,20 @@ $(document).ready(function(){
     table.on('draw', analyze);
 
 });
+
+    $('#periodTable tbody').on('click', '.edit-btn', function() {
+        let empId   = $(this).data('id');
+        let empName = $(this).data('name');
+        let sg      = $(this).data('sg');
+        let step    = $(this).data('step');
+        let tax     = $(this).data('tax');
+        $('#editEmpId').val(empId);
+        $('#editEmpName').val(empName);
+        $('#editSG').val(sg);
+        $('#editStep').val(step);
+        let cleanTax = tax.toString().replace('%', '');
+        $('#editTaxRate').val(cleanTax);
+        let editModal = new bootstrap.Modal(document.getElementById('editEmployeeModal'));
+        editModal.show();
+    });
 </script>

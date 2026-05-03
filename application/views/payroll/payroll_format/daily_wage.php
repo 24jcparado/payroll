@@ -179,12 +179,33 @@
                             </div>
                             
                             <label class="ledger-label text-dark">Employee Selection</label>
-                            <select id="employee_select" class="form-select form-select-lg border-2 shadow-sm">
-                                <option value="">-- Choose from Roster --</option>
+                            <?php 
+                                usort($employees, function($a, $b) {
+                                    $lastNameComparison = strcasecmp(trim($a->last_name), trim($b->last_name));
+                                
+                                    if ($lastNameComparison === 0) {
+                                        return strcasecmp(trim($a->name), trim($b->name));
+                                    }
+                                    return $lastNameComparison;
+                                });
+                            ?>
+
+                           <select id="employee_select" class="form-select border-2">
+                                <option value="">-- Select Employee --</option>
                                 <?php foreach ($employees as $row): ?>
                                     <?php if (!in_array($row->employee_id, $paid_ids)): ?>
-                                        <option value="<?= $row->employee_id ?>" data-position="<?= htmlspecialchars($row->position) ?>" data-name="<?= htmlspecialchars(trim($row->name . ' ' . $row->middle_name . ' ' . $row->last_name)) ?>">
-                                            <?= htmlspecialchars($row->name . ' ' . (!empty($row->middle_name) ? strtoupper(substr($row->middle_name, 0, 1)) . '. ' : '') . $row->last_name) ?>
+                                        <option value="<?= $row->employee_id ?>">
+                                            <?php 
+                                                $lastName = trim($row->last_name);
+                                                $firstName = trim($row->name); 
+                                                
+                                                // Grab only the first letter of the middle name and append a period
+                                                $middleInitial = !empty($row->middle_name) ? ' ' . strtoupper(substr(trim($row->middle_name), 0, 1)) . '.' : '';
+                                                
+                                                $extension = !empty($row->ext) ? ' ' . trim($row->ext) : '';
+                                                $fullName = $lastName . ', ' . $firstName . $middleInitial . $extension;
+                                            ?>
+                                            <?= htmlspecialchars($fullName) ?>
                                         </option>
                                     <?php endif; ?>
                                 <?php endforeach; ?>
@@ -973,5 +994,11 @@ $(document).ready(function() {
             }
         });
     };
+});
+$(document).ready(function() {
+    $('#employee_select').select2({
+        placeholder: "-- Select Employee --",
+        allowClear: true
+    });
 });
 </script>

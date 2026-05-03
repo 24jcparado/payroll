@@ -23,7 +23,7 @@
     }
     #mainContent {
         padding: 2rem;
-        max-width: 1800px; /* Widened to accommodate Quincena columns */
+        max-width: 100%; /* Full width to allow horizontal scrolling for dynamic columns */
         margin: 0 auto;
     }
 
@@ -35,7 +35,7 @@
         box-shadow: 0 4px 6px rgba(0,0,0,0.02), 0 1px 3px rgba(0,0,0,0.05);
         margin-bottom: 2rem;
         position: relative;
-        border-top: 5px solid #800000; /* EVSU Maroon */
+        border-top: 5px solid #800000;
     }
 
     /* MODERN TRACKER */
@@ -130,12 +130,12 @@
         white-space: nowrap;
     }
     .table-custom .font-monospace {
-        font-size: 1.1rem !important; /* Bumps up the size of the numbers */
-        letter-spacing: 0.5px; /* Adds a tiny bit of breathing room between digits */
+        font-size: 1.05rem !important;
+        letter-spacing: 0.5px;
     }
     
     .table-custom tfoot .font-monospace {
-        font-size: 1.25rem !important;
+        font-size: 1.15rem !important;
     }
     .table-custom tbody tr:hover {
         background-color: #f8f9fc;
@@ -237,7 +237,7 @@
 
     <div class="table-container">
         <div class="d-flex justify-content-between align-items-center p-4 border-bottom">
-            <h6 class="fw-bold mb-0 text-dark"><i class="bi bi-table text-primary me-2"></i><?=$payroll_type?> Payroll Register</h6>
+            <h6 class="fw-bold mb-0 text-dark"><i class="bi bi-table text-primary me-2"></i><?=$payroll_type ?? 'Payroll'?> Register</h6>
             <div>
                 <button class="btn btn-sm btn-outline-secondary rounded-pill px-3 hover-elevate me-2">
                     <i class="bi bi-download me-1"></i> Export
@@ -249,11 +249,10 @@
         </div>
 
         <?php
-        // SAFELY GATHER DEDUCTION NAMES
+        // 1. SAFELY GATHER ALL DEDUCTION NAMES
         $deduction_names = [];
         if (!empty($payrolls)) {
             foreach ($payrolls as $payroll) {
-                // Force to object just in case
                 $p = (object) $payroll; 
                 if (!empty($p->less)) {
                     $items = explode(',', $p->less);
@@ -269,77 +268,48 @@
                 }
             }
         }
+        // Sort alphabetically so the columns look organized
+        sort($deduction_names);
+
+        // 2. INITIALIZE GRAND TOTALS FOR FOOTER
+        $total_basic = 0; 
+        $total_gross = 0; 
+        $total_tax = 0; 
+        $total_deductions_all = 0; 
+        $total_net = 0;
+        // Create an array to track totals for each dynamic deduction column
+        $deduction_totals = array_fill_keys($deduction_names, 0);
         ?>
 
         <div class="table-responsive">
-            <?php
-            // INITIALIZE SAFE TOTALS
-            $total_basic = 0; $total_bonus = 0; $total_tax = 0; $total_net = 0; $total_deductions = 0;
-            $deduction_totals = array_fill_keys($deduction_names, 0);
-
-            if (!empty($payrolls)) {
-                foreach ($payrolls as $payroll) {
-                    $p = (object) $payroll; // Force object syntax
-
-                    $total_basic += (float) ($p->basic_salary ?? 0);
-                    $total_bonus += (float) ($p->gross_pay ?? 0);
-                    $total_tax += (float) ($p->tax ?? 0);
-                    $total_net += (float) ($p->net_pay ?? 0);
-                    $total_deductions += (float) ($p->total_deductions ?? 0);
-
-                    if (!empty($p->less)) {
-                        $items = explode(',', $p->less);
-                        foreach ($items as $item) {
-                            $parts = explode(':', $item);
-                            if (count($parts) == 2) {
-                                $name = trim($parts[0]);
-                                $amount = (float) trim($parts[1]);
-                                if(isset($deduction_totals[$name])){
-                                    $deduction_totals[$name] += $amount;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            ?>
-
             <table class="table table-custom align-middle" id="savedPayrollTable">
                 <thead class="sticky-top">
                     <tr>
                         <th rowspan="2" class="ps-4 border-end">Employee Information</th>
-                        <th colspan="4" class="text-center border-end text-success">Earnings</th>
-                        <th colspan="<?= count($deduction_names) + 5 ?>" class="text-center border-end text-danger">Deductions</th>
-                        <th colspan="3" class="text-center border-end text-primary">Net Pay</th>
+                        <th colspan="2" class="text-center border-end text-success col-earnings">Earnings</th>
+                        <!-- Calculate Colspan: dynamic loans + 2 (Tax & Total Deductions) -->
+                        <th colspan="<?= count($deduction_names) + 2 ?>" class="text-center border-end text-danger col-deductions">Deductions</th>
+                        <th rowspan="2" class="text-center text-primary">Net Pay</th>
                         <th rowspan="2" class="text-center pe-4">Action</th>
                     </tr>
                     <tr>
-                        <th class="text-end col-earnings">Basic</th>
-                        <th class="text-end col-earnings">Sal. LWOP</th>
-                        <th class="text-end col-earnings">PERA LWOP</th>
+                        <th class="text-end col-earnings">Basic Salary</th>
                         <th class="text-end border-end col-earnings text-success">Gross Pay</th>
                         
-                        <th class="text-end col-deductions">GSIS</th>
-                        <th class="text-end col-deductions">PhilHealth</th>
-                        <th class="text-end col-deductions">Pag-IBIG</th>
-                        
+                        <!-- DYNAMIC DEDUCTION HEADERS -->
                         <?php foreach ($deduction_names as $d): ?>
-                            <th class="text-end col-deductions opacity-75" style="font-size: 0.7rem;"><?= htmlspecialchars($d) ?></th>
+                            <th class="text-end col-deductions opacity-75" style="font-size: 0.70rem;"><?= htmlspecialchars($d) ?></th>
                         <?php endforeach ?>
                         
                         <th class="text-end col-deductions">W/ Tax</th>
                         <th class="text-end border-end col-deductions text-danger">Total Ded.</th>
-                        
-                        <th class="text-end text-primary">Total Net</th>
-                        <th class="text-end text-muted">1st Quin.</th>
-                        <th class="text-end border-end text-muted">2nd Quin.</th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php if(!empty($payrolls)): ?>
                         <?php foreach ($payrolls as $payroll): ?> 
                         <?php 
-                            $p = (object) $payroll; // Force object syntax safely
+                            $p = (object) $payroll; 
                             
                             $less_values = [];
                             if (!empty($p->less)) {
@@ -351,52 +321,83 @@
                                     }
                                 }
                             }
+
+                            $row_tax = (float)($p->tax ?? 0);
+                            $row_total_deduction = $row_tax; 
+
+                            $total_basic += (float)($p->basic_salary ?? 0);
+                            $total_gross += (float)($p->gross_pay ?? 0);
+                            $total_tax += $row_tax;
+                            $total_net += (float)($p->net_pay ?? 0);
+
+                            // Check if remarks exist for this row
+                            $has_remarks = !empty(trim($p->midyear_remarks ?? ''));
                         ?>
-                        <tr>
+                        <tr class="<?= $has_remarks ? 'table-danger' : '' ?>">
                             <td class="ps-4 border-end">
                                 <div class="fw-bold text-dark"><?= htmlspecialchars($p->name ?? '') ?></div>
                                 <div class="text-muted" style="font-size: 0.75rem;"><?= htmlspecialchars($p->position ?? '') ?></div>
+                                <!-- NEW: Small badge under the name if remarks exist -->
+                                <?php if($has_remarks): ?>
+                                    <div class="text-info mt-1" style="font-size: 0.7rem;">
+                                        <i class="bi bi-chat-dots-fill me-1"></i>Has Remarks
+                                    </div>
+                                <?php endif; ?>
                             </td>
                             
-                            <td class="text-end font-monospace col-earnings">₱ <?= number_format((float)($p->basic_salary ?? 0), 2) ?></td>
-                            <td class="text-end font-monospace col-earnings text-danger"><?= !empty($p->salary_lwop) && (float)$p->salary_lwop > 0 ? '- ₱ '.number_format((float)$p->salary_lwop, 2) : '<span class="opacity-25 text-muted">0.00</span>' ?></td>
-                            <td class="text-end font-monospace col-earnings text-danger"><?= !empty($p->pera) && (float)$p->pera > 0 ? '- ₱ '.number_format((float)$p->pera, 2) : '<span class="opacity-25 text-muted">0.00</span>' ?></td>
-                            <td class="text-end border-end font-monospace fw-semibold text-success amount-accrued col-earnings">₱ <?= number_format((float)($p->gross_pay ?? 0), 2) ?></td>
+                            <td class="text-end font-monospace col-earnings basic">₱ <?= number_format((float)($p->basic_salary ?? 0), 2) ?></td>
+                            <td class="text-end border-end font-monospace fw-semibold text-success gross col-earnings">₱ <?= number_format((float)($p->gross_pay ?? 0), 2) ?></td>
                             
-                            <td class="text-end font-monospace col-deductions gsis">₱ <?= number_format((float)($p->gsis ?? 0), 2) ?></td>
-                            <td class="text-end font-monospace col-deductions philhealth">₱ <?= number_format((float)($p->philhealth ?? 0), 2) ?></td>
-                            <td class="text-end font-monospace col-deductions pagibig">₱ <?= number_format((float)($p->pagibig ?? 0), 2) ?></td>
-                            
+                            <!-- DYNAMIC DEDUCTION ROWS -->
                             <?php foreach ($deduction_names as $d): ?>
-                                <td class="text-end font-monospace col-deductions text-muted"> 
-                                    <?= isset($less_values[$d]) && $less_values[$d] > 0 ? '₱ '.number_format($less_values[$d], 2) : '<span class="opacity-25">0.00</span>' ?>
+                                <?php 
+                                    $amount = isset($less_values[$d]) ? $less_values[$d] : 0;
+                                    $row_total_deduction += $amount;
+                                    $deduction_totals[$d] += $amount;
+                                ?>
+                                <td class="text-end font-monospace col-deductions text-muted dynamic-deduction-cell" data-key="<?= htmlspecialchars($d) ?>"> 
+                                    <?= $amount > 0 ? '₱ '.number_format($amount, 2) : '<span class="opacity-25">0.00</span>' ?>
                                 </td>
                             <?php endforeach ?>
                             
-                            <td class="text-end font-monospace col-deductions tax">₱ <?= number_format((float)($p->tax ?? 0), 2) ?></td>
-                            <td class="text-end border-end font-monospace fw-semibold text-danger tax-amount col-deductions">₱ <?= number_format((float)($p->total_deductions ?? 0), 2) ?></td>
-                            
-                            <td class="text-end font-monospace fw-bold text-primary netpay">₱ <?= number_format((float)($p->net_pay ?? 0), 2) ?></td>
-                            <td class="text-end font-monospace text-muted">₱ <?= number_format((float)($p->net_pay_first ?? 0), 2) ?></td>
-                            <td class="text-end font-monospace text-muted border-end">₱ <?= number_format((float)($p->net_pay_second ?? 0), 2) ?></td>
+                            <?php $total_deductions_all += $row_total_deduction; ?>
 
-                            <td class="text-center pe-4">
+                            <td class="text-end font-monospace col-deductions tax">₱ <?= number_format($row_tax, 2) ?></td>
+                            <td class="text-end border-end font-monospace fw-semibold text-danger total-ded col-deductions">₱ <?= number_format($row_total_deduction, 2) ?></td>
+                            <td class="text-center font-monospace fw-bold text-primary netpay" style="font-size: 1.15rem;">₱ <?= number_format((float)($p->net_pay ?? 0), 2) ?></td>
+
+                            <td class="text-center pe-4 text-nowrap">
                                 <button type="button" 
-                                        class="btn btn-light border btn-edit text-primary" 
-                                        data-id="<?= htmlspecialchars($p->id ?? '') ?>" 
+                                        class="btn btn-light border btn-edit text-primary me-1" 
+                                        data-id="<?= htmlspecialchars($p->midyear_id ?? '') ?>" 
                                         data-name="<?= htmlspecialchars($p->name ?? '') ?>"
-                                        data-net="<?= htmlspecialchars($p->net_pay ?? 0) ?>"
+                                        data-basic="<?= htmlspecialchars($p->basic_salary ?? 0) ?>"
+                                        data-gross="<?= htmlspecialchars($p->gross_pay ?? 0) ?>"
+                                        data-tax="<?= htmlspecialchars($p->tax ?? 0) ?>"
+                                        data-deductions='<?= htmlspecialchars(json_encode($less_values), ENT_QUOTES, 'UTF-8') ?>'
                                         onclick="openEditModal(this)"
                                         data-bs-toggle="tooltip" 
                                         title="Edit Row">
                                     <i class="bi bi-pencil-square"></i>
+                                </button>
+
+                                <!-- UPDATED: Button turns solid blue with a filled icon if there are remarks -->
+                                <button type="button" 
+                                        class="btn border btn-remark <?= $has_remarks ? 'btn-info text-white shadow-sm' : 'btn-light text-info' ?>" 
+                                        data-id="<?= htmlspecialchars($p->midyear_id ?? '') ?>" 
+                                        data-name="<?= htmlspecialchars($p->name ?? '') ?>"
+                                        data-remarks="<?= htmlspecialchars($p->midyear_remarks ?? '') ?>" 
+                                        onclick="openRemarksModal(this)"
+                                        data-bs-toggle="tooltip" 
+                                        title="<?= $has_remarks ? 'View/Edit Remarks' : 'Add Remarks' ?>">
+                                    <i class="bi <?= $has_remarks ? 'bi-chat-text-fill' : 'bi-chat-text' ?>"></i>
                                 </button>
                             </td>
                         </tr>
                         <?php endforeach; ?>
                     <?php else: ?>
                         <tr>
-                            <td colspan="<?= 10 + count($deduction_names) ?>" class="text-center py-5 text-muted">No payroll records found.</td>
+                            <td colspan="<?= count($deduction_names) + 7 ?>" class="text-center py-5 text-muted">No payroll records found.</td>
                         </tr>
                     <?php endif; ?>
                 </tbody>
@@ -404,25 +405,18 @@
                     <tr>
                         <td class="text-end ps-4 border-end pe-3 fw-bold">GRAND TOTAL</td>
                         
-                        <td class="text-end font-monospace"></td>
-                        <td class="text-end font-monospace"></td>
-                        <td class="text-end font-monospace"></td>
-                        <td class="text-end border-end font-monospace fw-bold text-success" id="total_amount_accrued">₱ 0.00</td>
+                        <td class="text-end font-monospace text-muted">₱ <?= number_format($total_basic, 2) ?></td>
+                        <td class="text-end border-end font-monospace fw-bold text-success">₱ <?= number_format($total_gross, 2) ?></td>
                         
-                        <td class="text-end font-monospace" id="total_gsis">₱ 0.00</td>
-                        <td class="text-end font-monospace" id="total_philhealth">₱ 0.00</td>
-                        <td class="text-end font-monospace" id="total_pagibig">₱ 0.00</td>
-                        
+                        <!-- DYNAMIC DEDUCTION TOTALS -->
                         <?php foreach ($deduction_names as $d): ?>
                             <td class="text-end font-monospace text-muted">₱ <?= number_format($deduction_totals[$d], 2) ?></td>
                         <?php endforeach ?>
                         
-                        <td class="text-end font-monospace" id="total_tax">₱ 0.00</td>
-                        <td class="text-end border-end font-monospace fw-bold text-danger" id="total_deductions_all">₱ 0.00</td>
+                        <td class="text-end font-monospace text-muted">₱ <?= number_format($total_tax, 2) ?></td>
+                        <td class="text-end border-end font-monospace fw-bold text-danger">₱ <?= number_format($total_deductions_all, 2) ?></td>
                         
-                        <td class="text-end font-monospace text-primary fs-6 fw-bold" id="total_netpay">₱ 0.00</td>
-                        <td></td>
-                        <td class="border-end"></td>
+                        <td class="text-center font-monospace text-primary fs-5 fw-bold">₱ <?= number_format($total_net, 2) ?></td>
                         <td class="pe-4"></td>
                     </tr>
                 </tfoot>
@@ -441,31 +435,51 @@
             <div class="modal-body">
                 <form id="editPayrollForm">
                     <input type="hidden" id="editRowId" name="id">
+                    <!-- Hidden field to store the unedited loans for accurate math -->
+                    <input type="hidden" id="editStaticDeductions" value="0">
                     
-                    <div class="mb-3">
+                    <div class="mb-4">
                         <label class="form-label text-muted small fw-bold text-uppercase">Employee Name</label>
-                        <input type="text" class="form-control bg-light" id="editEmpName" readonly>
+                        <input type="text" class="form-control bg-light fw-bold" id="editEmpName" readonly>
+                    </div>
+
+                    <div class="row g-3 mb-2">
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small fw-bold text-uppercase">Basic Salary</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light text-muted">₱</span>
+                                <input type="number" step="0.01" class="form-control calc-trigger" name="basic_salary" id="editBasicPay">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small fw-bold text-uppercase">Gross Pay</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light text-muted">₱</span>
+                                <input type="number" step="0.01" class="form-control calc-trigger text-success fw-bold" name="gross_pay" id="editGrossPay">
+                            </div>
+                        </div>
                     </div>
 
                     <div class="row g-3">
-                        <div class="col-md-6">
-                            <label class="form-label text-muted small fw-bold text-uppercase">Basic Pay</label>
+                        <div class="col-12">
+                            <label class="form-label text-muted small fw-bold text-uppercase">W/ Tax</label>
                             <div class="input-group">
                                 <span class="input-group-text bg-light text-muted">₱</span>
-                                <input type="number" step="0.01" class="form-control" name="basic_salary" id="editBasicPay">
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label text-muted small fw-bold text-uppercase">Tax</label>
-                            <div class="input-group">
-                                <span class="input-group-text bg-light text-muted">₱</span>
-                                <input type="number" step="0.01" class="form-control" name="tax" id="editTax">
+                                <input type="number" step="0.01" class="form-control calc-trigger text-danger" name="tax" id="editTax">
                             </div>
                         </div>
                     </div>
 
-                    <div class="alert alert-info mt-4 mb-0 small border-0">
-                        <i class="bi bi-info-circle-fill me-1"></i> Saving changes will automatically recalculate Net Pay.
+                    <!-- Live Preview Box -->
+                    <div class="mt-4 p-3 bg-light rounded-3 border">
+                        <div class="d-flex justify-content-between mb-2 small text-muted fw-bold">
+                            <span>Total Deductions (Tax + Existing Loans):</span>
+                            <span id="previewTotalDed" class="text-danger">₱ 0.00</span>
+                        </div>
+                        <div class="d-flex justify-content-between fs-5 fw-bold text-primary border-top pt-2">
+                            <span>Net Pay Preview:</span>
+                            <span id="previewNet">₱ 0.00</span>
+                        </div>
                     </div>
                 </form>
             </div>
@@ -477,97 +491,327 @@
     </div>
 </div>
 
+<div class="modal fade" id="remarksModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 rounded-4 shadow">
+            <div class="modal-header border-bottom-0 pb-0">
+                <h5 class="modal-title fw-bold"><i class="bi bi-chat-text text-info me-2"></i>Add / Edit Remarks</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="remarksForm">
+                    <input type="hidden" id="remarkRowId" name="id">
+                    
+                    <div class="mb-3">
+                        <label class="form-label text-muted small fw-bold text-uppercase">Employee Name</label>
+                        <input type="text" class="form-control bg-light fw-bold" id="remarkEmpName" readonly>
+                    </div>
+
+                    <div class="mb-2">
+                        <label class="form-label text-muted small fw-bold text-uppercase">Remarks / Notes</label>
+                        <textarea class="form-control" id="remarkText" rows="4" placeholder="Type remarks here..."></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer border-top-0 pt-0">
+                <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-info text-white rounded-pill px-4 fw-semibold" onclick="saveRemarks()">Save Remarks</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
 <script>
-    // Initialize tooltips for the "Other Deductions" and "Edit" icons
+    // 1. Initialize tooltips and Accessibility fixes
     var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
     var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
       return new bootstrap.Tooltip(tooltipTriggerEl)
-    })
+    });
 
-    // Formatting Helpers
+    $('#editRowModal').on('hide.bs.modal', function () {
+        if (document.activeElement) document.activeElement.blur();
+    });
+
+    // 2. Formatting Helpers
     function parsePeso(value) {
         if (!value) return 0;
-        return parseFloat(value.replace(/[₱,\s]/g, '')) || 0;
+        return parseFloat(value.toString().replace(/[₱,\s]/g, '')) || 0;
     }
 
     function formatPeso(value) {
-        return '₱ ' + value.toLocaleString('en-PH', {
+        return '₱ ' + Number(value).toLocaleString('en-PH', {
             minimumFractionDigits: 2,
             maximumFractionDigits: 2
         });
     }
 
-    // Dynamic Totals Calculator
-    function updateTotals() {
-        let totalGSIS = 0,
-            totalPhilhealth = 0,
-            totalPagibig = 0,
-            totalTax = 0,
-            totalAccrued = 0,
-            totalDedAll = 0,
-            totalNetPay = 0;
-
-        document.querySelectorAll('#savedPayrollTable tbody tr').forEach(row => {
-            if(!row.querySelector('.gsis')) return; // Skip if no data
-
-            totalGSIS += parsePeso(row.querySelector('.gsis').textContent);
-            totalPhilhealth += parsePeso(row.querySelector('.philhealth').textContent);
-            totalPagibig += parsePeso(row.querySelector('.pagibig').textContent);
-            totalTax += parsePeso(row.querySelector('.tax').textContent);
-            
-            totalAccrued += parsePeso(row.querySelector('.amount-accrued').textContent);
-            totalDedAll += parsePeso(row.querySelector('.tax-amount').textContent);
-            totalNetPay += parsePeso(row.querySelector('.netpay').textContent);
+    // 3. Attach Event Listeners on Page Load
+    document.addEventListener('DOMContentLoaded', function() {
+        updateTotals();
+        document.querySelectorAll('.calc-trigger').forEach(input => {
+            input.addEventListener('input', calculateNetPreview);
         });
+    });
 
-        // Apply formatted totals to the footer
-        document.getElementById('total_gsis').textContent = formatPeso(totalGSIS);
-        document.getElementById('total_philhealth').textContent = formatPeso(totalPhilhealth);
-        document.getElementById('total_pagibig').textContent = formatPeso(totalPagibig);
-        document.getElementById('total_tax').textContent = formatPeso(totalTax);
+    // 4. Modal Live Auto-Compute
+    function calculateNetPreview() {
+        const gross = parseFloat(document.getElementById('editGrossPay').value) || 0;
+        const tax = parseFloat(document.getElementById('editTax').value) || 0;
+        const staticDeductions = parseFloat(document.getElementById('editStaticDeductions').value) || 0;
         
-        document.getElementById('total_amount_accrued').textContent = formatPeso(totalAccrued);
-        document.getElementById('total_deductions_all').textContent = formatPeso(totalDedAll);
-        document.getElementById('total_netpay').textContent = formatPeso(totalNetPay);
+        // Total Deductions = Editable Tax + Non-Editable Existing Loans
+        const totalDed = staticDeductions + tax;
+        const net = gross - totalDed;
+        
+        document.getElementById('previewTotalDed').textContent = formatPeso(totalDed);
+        document.getElementById('previewNet').textContent = formatPeso(net);
     }
 
-    // Run calculation when DOM is ready
-    document.addEventListener('DOMContentLoaded', updateTotals);
-
-    // --- MODAL FUNCTIONS ---
+    // 5. Open Edit Modal
     function openEditModal(button) {
-        // Extract data from the button's data-* attributes
         const id = $(button).data('id');
         const name = $(button).data('name');
+        const basic = parseFloat($(button).data('basic')) || 0;
+        const gross = parseFloat($(button).data('gross')) || 0;
+        const tax = parseFloat($(button).data('tax')) || 0;
         
-        // Populate the modal
+        // Calculate the sum of all uneditable loans from the JSON data
+        let deds = {};
+        let staticDedsTotal = 0;
+        try {
+            deds = $(button).data('deductions');
+            if (typeof deds === 'string') deds = JSON.parse(deds);
+            for (let key in deds) {
+                staticDedsTotal += parseFloat(deds[key]) || 0;
+            }
+        } catch(e) { staticDedsTotal = 0; }
+
         $('#editRowId').val(id);
         $('#editEmpName').val(name);
+        $('#editBasicPay').val(basic.toFixed(2));
+        $('#editGrossPay').val(gross.toFixed(2));
+        $('#editTax').val(tax.toFixed(2));
+        $('#editStaticDeductions').val(staticDedsTotal); // Store the uneditable loans
         
-        // Show the modal
+        calculateNetPreview();
+        
         const editModal = new bootstrap.Modal(document.getElementById('editRowModal'));
         editModal.show();
     }
 
+    // 6. Save Changes
     function saveRowChanges() {
-        // Here you would grab the form data and send it to your CodeIgniter controller via AJAX
-        // const formData = $('#editPayrollForm').serialize();
+        if (document.activeElement) document.activeElement.blur(); // A11y fix
 
-        // Simulate success with SweetAlert
-        $('#editRowModal').modal('hide');
+        const id = $('#editRowId').val();
+        const basic = parseFloat($('#editBasicPay').val()) || 0;
+        const gross = parseFloat($('#editGrossPay').val()) || 0;
+        const tax = parseFloat($('#editTax').val()) || 0;
+        const staticDeductions = parseFloat($('#editStaticDeductions').val()) || 0;
         
-        Swal.fire({
-            icon: 'success',
-            title: 'Updated Successfully',
-            text: 'The payroll entry has been updated.',
-            showConfirmButton: false,
-            timer: 1500
-        }).then(() => {
-            // Optional: reload the page or update the table row dynamically
-            // location.reload();
+        const totalDed = staticDeductions + tax;
+        const netPay = gross - totalDed;
+
+        // AJAX Request to CodeIgniter
+        // Make sure you adjust this URL to match your controller exactly!
+        let payload = {
+            id: id,
+            basic_salary: basic,
+            gross_pay: gross,
+            tax: tax
+            // We do NOT send 'less' because we didn't edit the other deductions
+        };
+
+        // Add CSRF Token if needed by your CodeIgniter setup:
+        // payload['<?= $this->security->get_csrf_token_name() ?>'] = $('input[name="<?= $this->security->get_csrf_token_name() ?>"]').val();
+
+        $.ajax({
+            url: '<?= base_url("payroll/update_payrollmidyear_row") ?>',
+            type: 'POST',
+            data: payload,
+            dataType: 'json',
+            success: function(response) {
+                if(response.status) {
+                    const button = $(`button[data-id='${id}']`);
+                    const row = button.closest('tr');
+                    
+                    // Update table UI
+                    row.find('.basic').text(formatPeso(basic));
+                    row.find('.gross').text(formatPeso(gross));
+                    row.find('.tax').text(formatPeso(tax));
+                    row.find('.total-ded').text(formatPeso(totalDed));
+                    row.find('.netpay').text(formatPeso(netPay));
+
+                    // Update button data
+                    button.data('basic', basic);
+                    button.data('gross', gross);
+                    button.data('tax', tax);
+
+                    updateTotals();
+                    $('#editRowModal').modal('hide');
+
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Updated Successfully',
+                        showConfirmButton: false,
+                        timer: 1500
+                    });
+                } else {
+                    Swal.fire('Error', response.message || 'Update failed', 'error');
+                }
+            },
+            error: function() {
+                Swal.fire('Error', 'Server failed to process the request.', 'error');
+            }
+        });
+    }
+
+    // 7. Dynamic Totals Calculator
+    // 7. Dynamic Totals Calculator
+    function updateTotals() {
+        let totalBasic = 0, totalGross = 0, totalTax = 0, totalDedAll = 0, totalNetPay = 0;
+        let dynamicTotals = {};
+
+        document.querySelectorAll('#savedPayrollTable tbody tr').forEach(row => {
+            if(!row.querySelector('.basic')) return; 
+
+            totalBasic += parsePeso(row.querySelector('.basic').textContent);
+            totalGross += parsePeso(row.querySelector('.gross').textContent);
+            totalTax += parsePeso(row.querySelector('.tax').textContent);
+            totalDedAll += parsePeso(row.querySelector('.total-ded').textContent);
+            totalNetPay += parsePeso(row.querySelector('.netpay').textContent);
+
+            row.querySelectorAll('.dynamic-deduction-cell').forEach(cell => {
+                const key = cell.getAttribute('data-key');
+                const val = parsePeso(cell.textContent);
+                dynamicTotals[key] = (dynamicTotals[key] || 0) + val;
+            });
+        });
+
+        // FIXED: Select the <tr> inside the <tfoot>, not just the <tfoot> tag itself
+        const tfootRow = document.querySelector('#savedPayrollTable tfoot tr');
+        
+        if(tfootRow && tfootRow.cells.length > 2) {
+            tfootRow.cells[1].textContent = formatPeso(totalBasic);
+            tfootRow.cells[2].textContent = formatPeso(totalGross);
+            
+            let colIndex = 3;
+            <?php foreach ($deduction_names as $d): ?>
+                // Make sure dynamicTotals has a value to prevent NaN
+                tfootRow.cells[colIndex].textContent = formatPeso(dynamicTotals["<?= htmlspecialchars($d) ?>"] || 0);
+                colIndex++;
+            <?php endforeach; ?>
+            
+            tfootRow.cells[colIndex].textContent = formatPeso(totalTax);
+            tfootRow.cells[colIndex+1].textContent = formatPeso(totalDedAll);
+            tfootRow.cells[colIndex+2].textContent = formatPeso(totalNetPay);
+        }
+    }
+    document.addEventListener('DOMContentLoaded', function() {
+    
+    // 1. Find all input fields that have the "calc-trigger" class
+    const calculationInputs = document.querySelectorAll('.calc-trigger');
+
+    // 2. Tell the browser to listen for any typing ('input') in those fields
+    calculationInputs.forEach(function(inputField) {
+        inputField.addEventListener('input', function() {
+            
+            // --- THE MATH ---
+            
+            // Get the numbers from the inputs (default to 0 if empty)
+            let gross = parseFloat(document.getElementById('editGrossPay').value) || 0;
+            let tax = parseFloat(document.getElementById('editTax').value) || 0;
+            let staticDeductions = parseFloat(document.getElementById('editStaticDeductions').value) || 0;
+            
+            // Calculate Deductions
+            let totalDed = staticDeductions + tax;
+            
+            // Calculate Net Pay
+            let net = gross - totalDed;
+            
+            // Update the screen instantly
+            // (Assuming you have a formatting function like formatPeso)
+            document.getElementById('previewTotalDed').textContent = '₱ ' + totalDed.toFixed(2);
+            document.getElementById('previewNet').textContent = '₱ ' + net.toFixed(2);
+            
+        });
+    });
+
+});
+
+// Accessibility fix for the remarks modal
+    $('#remarksModal').on('hide.bs.modal', function () {
+        if (document.activeElement) document.activeElement.blur();
+    });
+
+    // 1. Open the Remarks Modal
+    function openRemarksModal(button) {
+        const id = $(button).data('id');
+        const name = $(button).data('name');
+        const remarks = $(button).data('remarks') || ""; 
+
+        // Populate the modal fields
+        $('#remarkRowId').val(id);
+        $('#remarkEmpName').val(name);
+        $('#remarkText').val(remarks);
+        
+        // Show modal
+        const remarksModal = new bootstrap.Modal(document.getElementById('remarksModal'));
+        remarksModal.show();
+    }
+
+    // 2. Save Remarks via AJAX
+    function saveRemarks() {
+        if (document.activeElement) document.activeElement.blur();
+
+        const id = $('#remarkRowId').val();
+        const remarks = $('#remarkText').val();
+
+        // Prepare data
+        let payload = {
+            id: id,
+            remarks: remarks
+        };
+
+        // Add CSRF Token if required
+        // payload['<?= $this->security->get_csrf_token_name() ?>'] = $('input[name="<?= $this->security->get_csrf_token_name() ?>"]').val();
+
+        $.ajax({
+            url: '<?= base_url("payroll/update_remarks_midyear") ?>', // Points to our new controller function
+            type: 'POST',
+            data: payload,
+            dataType: 'json',
+            success: function(response) {
+                if(response.status) {
+                    // Update the button's data attribute so it remembers the new remark
+                    const button = $(`button.btn-remark[data-id='${id}']`);
+                    button.data('remarks', remarks);
+                    
+                    // Optional: Change the button style slightly if it has remarks
+                    if(remarks.trim() !== "") {
+                        button.removeClass('btn-light').addClass('btn-info text-white');
+                    } else {
+                        button.removeClass('btn-info text-white').addClass('btn-light text-info');
+                    }
+
+                    $('#remarksModal').modal('hide');
+                    
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Remarks Saved',
+                        showConfirmButton: false,
+                        timer: 1500
+                    });
+                } else {
+                    Swal.fire('Error', response.message || 'Failed to save remarks', 'error');
+                }
+            },
+            error: function() {
+                Swal.fire('Error', 'Server failed to process the request.', 'error');
+            }
         });
     }
 </script>
-
 </body>
 </html>

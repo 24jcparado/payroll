@@ -32,6 +32,18 @@
     /* Net Pay Highlight */
     .net-pay-highlight { background: #ecfdf5; border: 2px solid #10b981; padding: 20px; border-radius: 12px; text-align: center; }
     .net-pay-amount { font-size: 2rem !important; color: #047857 !important; letter-spacing: -1px; }
+    #savedPayrollTable th {
+        white-space: nowrap; 
+        vertical-align: middle;
+        padding: 12px 16px;
+    }
+
+    #savedPayrollTable td {
+        white-space: nowrap; 
+        vertical-align: middle;
+        padding: 12px 16px;
+        font-size: 0.8rem; /* Makes only the table data smaller */
+    }
 </style>
 
 <main id="mainContent" class="py-4">
@@ -118,16 +130,34 @@
                     <div class="card-body">
                         <div class="mb-3">
                             <label class="ledger-label">Employee Selection</label>
-                            <select id="employee_select" class="form-select border-2">
-                                <option value="">-- Select Employee --</option>
-                                <?php foreach ($employees as $row): ?>
-                                    <?php if (!in_array($row->employee_id, $paid_ids)): ?>
-                                        <option value="<?= $row->employee_id ?>">
-                                            <?= htmlspecialchars($row->name . ' ' . $row->last_name) ?> (SG-<?= $row->sg ?>)
-                                        </option>
-                                    <?php endif; ?>
-                                <?php endforeach; ?>
-                            </select>
+                           <?php 
+                            usort($employees, function($a, $b) {
+                                $lastNameComparison = strcasecmp(trim($a->last_name), trim($b->last_name));
+                            
+                                if ($lastNameComparison === 0) {
+                                    return strcasecmp(trim($a->name), trim($b->name));
+                                }
+                                return $lastNameComparison;
+                            });
+                        ?>
+
+                        <select id="employee_select" class="form-select border-2" style="width: 100%;">
+                            <option value="">-- Select Employee --</option>
+                            <?php foreach ($employees as $row): ?>
+                                <?php if (!in_array($row->employee_id, $paid_ids)): ?>
+                                    <option value="<?= $row->employee_id ?>">
+                                        <?php 
+                                            $lastName = trim($row->last_name);
+                                            $firstName = trim($row->name); 
+                                            $middleName = !empty($row->middle_name) ? ' ' . trim($row->middle_name) : '';
+                                            $extension = !empty($row->ext) ? ' ' . trim($row->ext) : '';
+                                            $fullName = $lastName . ', ' . $firstName . $middleName . $extension;
+                                        ?>
+                                        <?= htmlspecialchars($fullName) ?> (SG-<?= htmlspecialchars($row->sg) ?> STEP-<?= htmlspecialchars($row->step) ?>)
+                                    </option>
+                                <?php endif; ?>
+                            <?php endforeach; ?>
+                        </select>
                         </div>
 
                         <form id="payrollForm">
@@ -887,70 +917,85 @@ $(document).ready(function() {
 ================================ */
 
 $(document).on('click', '#btnEmailPayslips', function() {
+    // 1. Get the ID (Using .attr is safer for dynamically loaded buttons)
     let period_id = $(this).attr('data-period_id');
+    
     if (!period_id) {
-        Swal.fire('Error', 'Period ID is missing from the button!', 'error');
+        Swal.fire('Error', 'Cannot find the Payroll Period ID.', 'error');
         return;
     }
+
     Swal.fire({
         title: 'Send E-Payslips?',
-        html: "This will automatically generate and email the PDF payslips to all <strong>processed employees</strong> in this batch.",
+        text: "This will email PDF payslips to all processed employees.",
         icon: 'question',
         showCancelButton: true,
-        confirmButtonColor: '#10b981', // Match the success green
-        cancelButtonColor: '#6c757d',
-        confirmButtonText: '<i class="bi bi-send-fill me-1"></i> Yes, send them now!',
-        cancelButtonText: 'Wait, cancel'
+        confirmButtonColor: '#10b981',
+        confirmButtonText: 'Yes, send them!'
     }).then((result) => {
         if (result.isConfirmed) {
             
-            // Show a persistent loading state since emailing can take time
             Swal.fire({
                 title: 'Sending Emails...',
-                html: 'Please do not close this window. This may take a moment depending on the batch size.',
+                text: 'Please wait. Do not close this window.',
                 allowOutsideClick: false,
-                allowEscapeKey: false,
-                didOpen: () => {
-                    Swal.showLoading()
-                }
+                didOpen: () => { Swal.showLoading(); }
             });
 
-            // Send the request to your controller
             $.ajax({
                 url: "<?= base_url('payroll/email_batch_payslips') ?>",
                 type: "POST",
                 data: { 
                     period_id: period_id,
-                    '<?= $this->security->get_csrf_token_name() ?>': '<?= $this->security->get_csrf_hash() ?>'
-                 },
+                    // If you have CSRF enabled in CodeIgniter, uncomment the line below:
+                    // '<?= $this->security->get_csrf_token_name() ?>': '<?= $this->security->get_csrf_hash() ?>'
+                },
                 dataType: "json",
                 success: function(res) {
-                    if (res.status === 'success') {
+                    
+                    if (res.status === 'success' || res.status === 'warning') {
+                        // Format the Successful Names
+                        let htmlList = '<div style="text-align: left; font-size: 13px;">';
+                        
+                        if (res.sent_to && res.sent_to.length > 0) {
+                            htmlList += '<strong class="text-success">Delivered To:</strong><ul style="max-height: 150px; overflow-y: auto;">';
+                            res.sent_to.forEach(name => htmlList += `<li>${name}</li>`);
+                            htmlList += '</ul>';
+                        }
+
+                        // Format the Failed Names
+                        if (res.failed_to && res.failed_to.length > 0) {
+                            htmlList += '<strong class="text-danger mt-2">Failed Deliveries:</strong><ul style="max-height: 150px; overflow-y: auto;">';
+                            res.failed_to.forEach(name => htmlList += `<li>${name}</li>`);
+                            htmlList += '</ul>';
+                        }
+                        
+                        htmlList += '</div>';
+
                         Swal.fire({
-                            title: 'Success!',
-                            text: res.message || 'All payslips have been successfully dispatched.',
-                            icon: 'success',
-                            confirmButtonColor: '#10b981'
+                            title: res.status === 'success' ? 'Success!' : 'Partial Success',
+                            html: `<b>${res.message}</b><hr>${htmlList}`,
+                            icon: res.status,
+                            confirmButtonColor: '#6b0f1a'
                         });
+
                     } else {
-                        Swal.fire({
-                            title: 'Warning',
-                            text: res.message || 'The process finished, but some emails may have failed. Please check the logs.',
-                            icon: 'warning'
-                        });
+                        // This catches the PHP CRASH or Invalid Period ID errors
+                        Swal.fire('Error', res.message, 'error');
                     }
                 },
                 error: function() {
-                    Swal.fire({
-                        title: 'Server Error',
-                        text: 'Unable to communicate with the mail server. Please try again later.',
-                        icon: 'error'
-                    });
+                    Swal.fire('Server Error', 'Could not connect to the server.', 'error');
                 }
             });
         }
     });
 });
-
+$(document).ready(function() {
+    $('#employee_select').select2({
+        placeholder: "-- Select Employee --",
+        allowClear: true
+    });
+});
 </script>
 

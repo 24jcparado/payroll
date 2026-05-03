@@ -1,246 +1,158 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <title>Hazard Pay Payroll - EVSU</title>
+    <title>Hazard Pay General Payroll</title>
     <style>
-        @page {
-            size: A4 landscape;
-            margin: 8mm;
-        }
-        body {
-            font-family: "Helvetica", "Arial", sans-serif;
-            font-size: 10px;
-            color: #000;
-            margin: 0;
-            padding: 0;
-        }
-        .header-section {
-            text-align: center;
-            margin-bottom: 10px;
-            border-bottom: 2px solid #000;
-            padding-bottom: 5px;
-            position: relative;
-        }
-        .header-section h2 { font-size: 16px; margin: 0; text-transform: uppercase; }
-        .header-section h3 { font-size: 13px; margin: 2px 0; }
+        body { font-family: Arial, sans-serif; font-size: 10px; margin: 0; padding: 0; }
+        .container { width: 100%; padding: 10px; }
+        .header { text-align: center; margin-bottom: 10px; line-height: 1.2; }
+        .header h2 { margin: 0; font-size: 14px; text-transform: uppercase; }
         
-        .qr-container {
-            position: absolute;
-            right: 0;
-            top: 0;
-            text-align: center;
-        }
-        .qr-code-img {
-            width: 70px;
-            height: 70px;
-            border: 1px solid #ccc;
-        }
-
-        .info-row { margin-bottom: 8px; width: 100%; }
-        .period-box { float: left; width: 50%; }
-        .notice-box { float: right; width: 45%; font-style: italic; font-size: 8px; text-align: right; }
-        .clearfix { clear: both; }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            table-layout: fixed;
-            margin-bottom: 10px;
-        }
-        th, td {
-            border: 1px solid #000;
-            padding: 4px 3px;
-            word-wrap: break-word;
-        }
-        th {
-            background-color: #f2f2f2;
-            font-size: 8px;
-            text-transform: uppercase;
-            vertical-align: middle;
-            text-align: center;
-        }
-        td { font-size: 9px; vertical-align: middle; }
+        table { width: 100%; border-collapse: collapse; border: 2px solid black; margin-bottom: 10px; }
+        th, td { border: 1px solid black; padding: 3px 5px; font-size: 9px; }
+        th { text-align: center; font-weight: bold; background-color: #f2f2f2; }
         
         .text-right { text-align: right; }
         .text-center { text-align: center; }
-        .fw-bold { font-weight: bold; }
-        
-        .subtotal-row { background-color: #f9f9f9; font-style: italic; font-weight: bold; }
-        .grand-total-row { background-color: #eee; font-weight: bold; }
+        .bold { font-weight: bold; }
 
-        .signature-table { border: none; margin-top: 20px; width: 100%; }
-        .signature-table td { border: none; padding: 10px 5px; text-align: center; vertical-align: bottom; }
-        .sig-line { border-top: 1px solid #000; width: 90%; margin: 0 auto 2px auto; font-weight: bold; }
+        /* Certification Boxes */
+        .cert-container { width: 100%; border: 1px solid black; display: table; table-layout: fixed; }
+        .cert-row { display: table-row; }
+        .cert-box { display: table-cell; border: 1px solid black; padding: 6px; vertical-align: top; height: 110px; width: 50%; }
+        .cert-title { font-weight: bold; font-size: 10px; margin-bottom: 3px; }
+        .signature-line { margin-top: 30px; border-top: 1px solid black; width: 85%; margin-left: auto; margin-right: auto; text-align: center; font-weight: bold; }
         
-        .page-break { page-break-after: always; }
+        .footer-table { width: 100%; margin-top: 5px; border: none; }
+        .footer-table td { border: none; padding: 0; }
     </style>
 </head>
 <body>
 
-<?php
-// SETTINGS
-$rowsPerPage = 15; 
-$chunks = array_chunk($payroll, $rowsPerPage);
-$totalPages = count($chunks);
-
-// Initialize Grand Totals
-$grand = [
-    'basic_salary' => 0, 
-    'gross_pay' => 0, 
-    'tax' => 0, 
-    'total_deductions' => 0, 
-    'net_pay' => 0
-];
-$grandOther = array_fill_keys($otherColumns, 0);
-$rowNo = 1;
-
-foreach ($chunks as $pageIdx => $pageRows):
-    $pageNo = $pageIdx + 1;
-    
-    // Initialize Page Subtotals
-    $pt = array_fill_keys(array_keys($grand), 0);
-    $ptOther = array_fill_keys($otherColumns, 0);
-?>
-
-<div class="header-section">
-    <div class="qr-container">
-        <img src="<?=base_url($period->qr_code)?>" class="qr-code-img">
-        <div style="font-size: 7px; font-family: monospace;"><?= $period->token_id ?></div>
+<div class="container">
+    <div class="header">
+        <p style="margin:0;">GENERAL PAYROLL</p>
+        <h2>EASTERN VISAYAS STATE UNIVERSITY</h2>
+        <p style="margin:0;">Tacloban City</p>
+        <p class="bold" style="margin-top: 5px;"><?= strtoupper(date('F, Y', strtotime($period->date_period))) ?></p>
     </div>
-    <h3>Republic of the Philippines</h3>
-    <h2>Eastern Visayas State University</h2>
-    <div style="font-size: 10px;">Tacloban City</div>
-    <h2 style="margin-top: 8px; border-top: 1px solid #eee; padding-top: 5px;">Hazard Pay Payroll</h2>
-</div>
 
-<div class="info-row">
-    <div class="period-box">
-        Calendar Year: <span class="fw-bold"><?= date('Y', strtotime($period->date_period)) ?></span><br>
-        Fund Source: <span class="fw-bold"><?= $period->payroll_type ?></span>
-    </div>
-    <div class="notice-box">
-        "We acknowledge receipt of the Hazard Pay shown opposite our names as full compensation for services rendered."
-    </div>
-    <div class="clearfix"></div>
-</div>
+    <p style="font-size: 8px; margin-bottom: 5px;">
+        HAZARD PAY (per BR #96 s. 2007 / DBM-DOH JC #1 s. 2016)<br>
+        We acknowledge receipt of the sum shown opposite our names as full compensation for services rendered for the period covered.
+    </p>
 
-<table>
-    <thead>
-        <tr>
-            <th width="30" rowspan="2">No.</th>
-            <th width="150" rowspan="2">Name</th>
-            <th width="100" rowspan="2">Position</th>
-            <th width="80" rowspan="2">Monthly Basic<br>Salary</th>
-            <th width="80" rowspan="2">Gross Hazard<br>Pay</th>
-            <th colspan="<?= 1 + count($otherColumns) ?>">Deductions</th>
-            <th width="80" rowspan="2">Total<br>Deductions</th>
-            <th width="90" rowspan="2">Net Pay<br>Amount</th>
-        </tr>
-        <tr>
-            <th width="60">W/Tax</th>
-            <?php foreach($otherColumns as $col): ?>
-                <th><?= htmlspecialchars($col) ?></th>
-            <?php endforeach; ?>
-        </tr>
-    </thead>
-    <tbody>
-        <?php foreach ($pageRows as $row): 
-            // Add to Page Subtotal
-            $pt['basic_salary'] += $row->basic_salary;
-            $pt['gross_pay'] += $row->gross_pay;
-            $pt['tax'] += $row->tax;
-            $pt['total_deductions'] += $row->total_deductions;
-            $pt['net_pay'] += $row->net_pay;
-
-            // Add to Grand Total
-            $grand['basic_salary'] += $row->basic_salary;
-            $grand['gross_pay'] += $row->gross_pay;
-            $grand['tax'] += $row->tax;
-            $grand['total_deductions'] += $row->total_deductions;
-            $grand['net_pay'] += $row->net_pay;
-        ?>
-        <tr>
-            <td class="text-center"><?= $rowNo++ ?></td>
-            <td class="fw-bold"><?= htmlspecialchars($row->name) ?></td>
-            <td><?= htmlspecialchars($row->position) ?></td>
-            <td class="text-right"><?= number_format($row->basic_salary, 2) ?></td>
-            <td class="text-right fw-bold"><?= number_format($row->gross_pay, 2) ?></td>
-            <td class="text-right"><?= number_format($row->tax, 2) ?></td>
-            <?php foreach($otherColumns as $col): 
-                $val = $row->parsed_deductions[$col] ?? 0;
-                $ptOther[$col] += $val;
-                $grandOther[$col] += $val;
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 3%;">NO.</th>
+                <th style="width: 20%;">NAME</th>
+                <th style="width: 15%;">POSITION / SG</th>
+                <th style="width: 12%;">BASIC SALARY</th>
+                <th style="width: 12%;">AMOUNT ACCRUED</th>
+                <th style="width: 12%;">Total Amount Accrued</th>
+                <th style="width: 12%;">Less: W/holding Tax</th>
+                <th style="width: 12%;">NET DUE</th>
+                <th style="width: 10%;">REMARKS</th>
+            </tr>
+        </thead>
+        <tbody>
+            <?php 
+            $count = 1;
+            $total_accrued = 0; $total_tax = 0; $total_net = 0;
+            foreach($payroll as $p): 
+                $total_accrued += $p->gross_pay;
+                $total_tax += $p->tax;
+                $total_net += $p->net_pay;
+                
+                // Logic to display percentage based on SG
+                // Assuming you store SG in your employee table, otherwise default to "Hazard Pay"
+                $percentage_label = ($p->basic_salary > 0) ? round(($p->gross_pay / $p->basic_salary) * 100) . "% of Basic Salary" : "";
             ?>
-                <td class="text-right"><?= number_format($val, 2) ?></td>
+            <tr>
+                <td class="text-center"><?= $count++ ?></td>
+                <td class="bold"><?= strtoupper($p->name) ?></td>
+                <td class="text-center"><?= $p->position ?></td>
+                <td class="text-right"><?= number_format($p->basic_salary, 2) ?></td>
+                <td class="text-center">
+                    <?= number_format($p->gross_pay, 2) ?><br>
+                    <small style="font-size: 7px;">(<?= $percentage_label ?>)</small>
+                </td>
+                <td class="text-right bold"><?= number_format($p->gross_pay, 2) ?></td>
+                <td class="text-right"><?= number_format($p->tax, 2) ?></td>
+                <td class="text-right bold"><?= number_format($p->net_pay, 2) ?></td>
+                <td></td>
+            </tr>
             <?php endforeach; ?>
-            <td class="text-right fw-bold"><?= number_format($row->total_deductions, 2) ?></td>
-            <td class="text-right fw-bold" style="background-color: #fcfcfc;">₱ <?= number_format($row->net_pay, 2) ?></td>
-        </tr>
-        <?php endforeach; ?>
-
-        <tr class="subtotal-row">
-            <td colspan="3" class="text-center">PAGE SUBTOTAL (Page <?= $pageNo ?> of <?= $totalPages ?>)</td>
-            <td class="text-right"><?= number_format($pt['basic_salary'], 2) ?></td>
-            <td class="text-right"><?= number_format($pt['gross_pay'], 2) ?></td>
-            <td class="text-right"><?= number_format($pt['tax'], 2) ?></td>
-            <?php foreach($otherColumns as $col): ?>
-                <td class="text-right"><?= number_format($ptOther[$col], 2) ?></td>
-            <?php endforeach; ?>
-            <td class="text-right"><?= number_format($pt['total_deductions'], 2) ?></td>
-            <td class="text-right">₱ <?= number_format($pt['net_pay'], 2) ?></td>
-        </tr>
-
-        <?php if ($pageNo == $totalPages): ?>
-        <tr class="grand-total-row">
-            <td colspan="3" class="text-center">GRAND TOTAL</td>
-            <td class="text-right"><?= number_format($grand['basic_salary'], 2) ?></td>
-            <td class="text-right"><?= number_format($grand['gross_pay'], 2) ?></td>
-            <td class="text-right"><?= number_format($grand['tax'], 2) ?></td>
-            <?php foreach($otherColumns as $col): ?>
-                <td class="text-right"><?= number_format($grandOther[$col], 2) ?></td>
-            <?php endforeach; ?>
-            <td class="text-right"><?= number_format($grand['total_deductions'], 2) ?></td>
-            <td class="text-right">₱ <?= number_format($grand['net_pay'], 2) ?></td>
-        </tr>
-        <?php endif; ?>
-    </tbody>
-</table>
-
-<?php if ($pageNo == $totalPages): ?>
-<div style="margin-top: 10px; border: 1px solid #000; padding: 8px;">
-    <table style="border: none; width: 100%; margin: 0;">
-        <tr style="border: none;">
-            <td style="border: none; width: 60%; font-size: 10px;">
-                Total Amount in Words: <br>
-                <strong style="text-transform: uppercase;"><?= number_to_words($grand['net_pay']) ?> PESOS ONLY</strong>
-            </td>
-            <td style="border: none; width: 40%; text-align: right; font-size: 12px;">
-                Total Net Amount: <span class="fw-bold">₱ <?= number_format($grand['net_pay'], 2) ?></span>
-            </td>
-        </tr>
+            
+            <tr class="bold" style="background-color: #eee;">
+                <td colspan="3" class="text-right">GRAND TOTALS</td>
+                <td class="text-right"></td>
+                <td class="text-right"></td>
+                <td class="text-right"><?= number_format($total_accrued, 2) ?></td>
+                <td class="text-right"><?= number_format($total_tax, 2) ?></td>
+                <td class="text-right"><?= number_format($total_net, 2) ?></td>
+                <td></td>
+            </tr>
+        </tbody>
     </table>
+
+    <!-- Certification Section -->
+    <div class="cert-container">
+        <div class="cert-row">
+            <div class="cert-box">
+                <div class="cert-title">A. CERTIFIED: Services has been duly rendered as stated</div>
+                <div class="signature-line" style="margin-top: 50px;">
+                    DR. DORIS ANN S. ESPINA<br>
+                    <span style="font-weight: normal; font-size: 8px;">CAO, Adm. Services Division</span>
+                </div>
+            </div>
+            <div class="cert-box">
+                <div class="cert-title">B. APPROVED FOR PAYMENT:</div>
+                <p class="text-center bold" style="margin-top: 15px;">
+                    <?= ucwords(number_to_words($total_net)) ?> Pesos and <?= date('s') ?>/100. (₱<?= number_format($total_net, 2) ?>)
+                </p>
+                <div class="signature-line" style="margin-top: 25px;">
+                    DR. LYDIA M. MORANTE<br>
+                    <span style="font-weight: normal; font-size: 8px;">VPAdmin. and Finance</span>
+                </div>
+            </div>
+        </div>
+        <div class="cert-row">
+            <div class="cert-box">
+                <div class="cert-title">C. CERTIFIED: Supporting documents complete and proper and cash available in the amount of ₱</div>
+                <div class="text-right bold" style="padding-right: 20px;"><?= number_format($total_net, 2) ?></div>
+                <div class="signature-line" style="margin-top: 25px;">
+                    RUBY N. MANCIO, CPA<br>
+                    <span style="font-weight: normal; font-size: 8px;">Head Accounting Office</span>
+                </div>
+            </div>
+            <div class="cert-box">
+                <div class="cert-title">D. CERTIFIED: Each employee whose name appears above has been paid the amount indicated opposite his/her name.</div>
+                <div class="signature-line" style="margin-top: 35px;">
+                    LEAH S. BELEÑA<br>
+                    <span style="font-weight: normal; font-size: 8px;">Head Cashiering Office</span>
+                </div>
+                <table class="footer-table" style="margin-top: 10px;">
+                    <tr>
+                        <td>OS/BUS/US No.</td>
+                        <td>Date:</td>
+                    </tr>
+                    <tr>
+                        <td>JEV No.</td>
+                        <td>Date:</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div style="margin-top: 10px; width: 40%;">
+        <p>Prepared by:</p>
+        <p class="bold" style="margin-top: 25px; border-bottom: 1px solid black; display: inline-block;">HONEY LEE F. CADAVIS, MM</p>
+        <p style="margin:0;">Head HRMDO</p>
+    </div>
 </div>
-
-<table class="signature-table">
-    <tr>
-        <td>Prepared by:<br><br><br><div class="sig-line">Personnel Clerk</div>Designation</td>
-        <td>Certified Correct:<br><br><br><div class="sig-line">University Accountant</div>Accountant III</td>
-        <td>Certified Services Rendered:<br><br><br><div class="sig-line">DR. DORIS ANN S. ESPINA</div>CAO, Admin Services</td>
-    </tr>
-    <tr>
-        <td>Approved for Payment:<br><br><br><div class="sig-line">DR. LYDIA M. MORANTE</div>VPAA / OIC President</td>
-        <td>Approved by:<br><br><br><div class="sig-line">Head of Agency</div>Authorized Representative</td>
-        <td>Verified by:<br><br><br><div class="sig-line">Internal Auditor</div>Audit Section</td>
-    </tr>
-</table>
-<?php endif; ?>
-
-<?php if ($pageNo < $totalPages): ?>
-    <div class="page-break"></div>
-<?php endif; ?>
-
-<?php endforeach; ?>
 
 </body>
 </html>

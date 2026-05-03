@@ -403,4 +403,46 @@ $(document).on('click', '.deleteUserBtn', function(){
             }
         });
     });
+
+   $(document).ready(function(){
+    // 1. Unified Username Auto-gen
+    $('#first_name, #last_name').on('input', function () {
+        let fn = $('#first_name').val().trim().charAt(0).toLowerCase();
+        let ln = $('#last_name').val().trim().toLowerCase().replace(/\s+/g, '');
+        if (fn && ln) {
+            // Match the logic you want (rcvr_ prefix + names)
+            $('#username').val('rcvr_' + fn + ln); 
+        }
+    });
+
+    // 2. Fixed Form Submit Logic
+    $('#receiverForm').on('submit', function(e){
+        e.preventDefault();
+        
+        let submitBtn = $(this).find('button[type="submit"]');
+        submitBtn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span> Processing...');
+
+        $.post($(this).attr('action'), $(this).serialize(), function(res){
+            submitBtn.prop('disabled', false).text('Save Receiver Data');
+            
+            // Check if res is already an object or needs parsing
+            let data = typeof res === 'object' ? res : JSON.parse(res);
+            
+            if(data.status){
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Success',
+                    text: data.message
+                }).then(() => location.reload());
+            } else {
+                Swal.fire('Error', data.message, 'error');
+            }
+        }).fail(function(xhr) {
+            // This captures the 500 error details
+            submitBtn.prop('disabled', false).text('Save Receiver Data');
+            console.error(xhr.responseText);
+            Swal.fire('Server Error', 'Check console for details (F12 -> Network -> Response)', 'error');
+        });
+    });
+});
 </script>

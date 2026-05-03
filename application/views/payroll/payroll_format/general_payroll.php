@@ -126,6 +126,52 @@
         border-radius: 4px;
         margin-left: 5px;
     }
+    /* 1. Define the scrollable area for the table */
+    .table-responsive {
+        max-height: auto; /* Adjust this height based on your layout needs */
+        overflow: auto;
+    }
+
+    /* 2. Sticky Header (Top) */
+    #savedPayrollTable thead th {
+        position: sticky;
+        z-index: 10;
+        /* Remove transparent background utilities from HTML if they conflict */
+    }
+    
+    /* First row of the header */
+    #savedPayrollTable thead tr:nth-child(1) th {
+        top: 0;
+        background-color: #f8f9fa !important; /* Match Bootstrap's bg-light */
+    }
+    
+    /* Second row of the header */
+    #savedPayrollTable thead tr:nth-child(2) th {
+        /* You may need to tweak this 41px depending on the exact rendered height of your first row */
+        top: 41px; 
+        background-color: #ffffff !important; 
+        box-shadow: 0 2px 4px -2px rgba(0,0,0,0.1); /* Subtle shadow separating header from body */
+    }
+
+    /* 3. Sticky First Column (Left - Employee Info/Name) */
+    #savedPayrollTable tbody td:first-child,
+    #savedPayrollTable thead th:first-child {
+        position: sticky;
+        left: 0;
+        z-index: 11; /* Higher than normal headers so it scrolls over other columns */
+        background-color: #ffffff; /* Must be solid so underlying text doesn't show through */
+        border-right: 2px solid #e2e8f0 !important; /* Creates a clean edge for the fixed column */
+    }
+
+    /* 4. Top-Left Corners (Intersection of sticky header and sticky column) */
+    #savedPayrollTable thead tr:nth-child(1) th:first-child {
+        z-index: 12; /* Needs the highest z-index to stay above everything */
+        background-color: #f8f9fa !important;
+    }
+    #savedPayrollTable thead tr:nth-child(2) th:first-child {
+        z-index: 12;
+        background-color: #ffffff !important;
+    }
 </style>
 
 <main id="mainContent" class="py-4">
@@ -396,7 +442,7 @@
 
                 <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
                     <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
-                        <h6 class="mb-0 fw-bold">Processed Members (<?= $unit ?>)</h6>
+                        <h6 class="mb-0 fw-bold"><?= $particulars ?></h6>
                         <div class="dropdown">
                             <button class="btn btn-light btn-sm border rounded-pill px-3 dropdown-toggle shadow-sm" data-bs-toggle="dropdown">
                                 <i class="bi bi-download me-1 text-primary"></i> Operations
@@ -478,6 +524,22 @@ $(document).ready(function() {
 
     $('#payrollForm').on('submit', function(e){
         e.preventDefault();
+
+        // --- ADDED VALIDATION HERE ---
+        // Parse the net pay value, defaulting to 0 if empty
+        const currentNetPay = parseFloat($('#net_pay').val()) || 0;
+        
+        if (currentNetPay <= 5000) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Net Pay Too Low',
+                text: 'Net take-home pay cannot be equal to or less than ₱5,000.00. Please review the deductions.',
+                confirmButtonColor: '#6b0f1a' // Matches your maroon theme
+            });
+            return; // Stop execution here so it doesn't submit via AJAX
+        }
+        // -----------------------------
+
         const payrollId = $('#payroll_id').val();
         const isEdit = payrollId && payrollId !== '';
         const url = isEdit ? "<?= base_url('payroll/updatePayroll') ?>" : "<?= base_url('payroll/insertPayroll') ?>";

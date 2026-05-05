@@ -50,9 +50,18 @@
         }
         th, td {
             border: 1px solid #000;
-            padding: 4px 3px;
+            padding: 2px 1px;
             word-wrap: break-word;
         }
+        
+        .col-no { 
+            width: 20px !important; 
+            max-width: 20px !important;
+            padding: 2px 0px !important; 
+            text-align: center !important; 
+            overflow: hidden;
+        }
+
         th {
             background-color: #f2f2f2;
             font-size: 8px;
@@ -69,36 +78,45 @@
         .subtotal-row { background-color: #f9f9f9; font-style: italic; font-weight: bold; }
         .grand-total-row { background-color: #eee; font-weight: bold; }
 
-        .signature-table { border: none; margin-top: 20px; width: 100%; }
-        .signature-table td { border: none; padding: 10px 5px; text-align: center; vertical-align: bottom; }
-        .sig-line { border-top: 1px solid #000; width: 90%; margin: 0 auto 2px auto; font-weight: bold; }
+        .cert-container { 
+            width: 100%; 
+            border: 1px solid #000; 
+            margin-top: 15px; 
+            border-collapse: collapse; 
+            display: table; 
+            page-break-inside: avoid; /* Keeps the footer from breaking in half */
+        }
+        .cert-row { display: table-row; }
+        .cert-box { display: table-cell; border: 1px solid #000; padding: 8px; vertical-align: top; width: 50%; height: 100px; }
+        .cert-title { font-weight: bold; font-size: 8.5px; margin-bottom: 5px; }
+        .signature-line { text-align: center; font-weight: bold; font-size: 10px; width: 85%; margin: 0 auto; border-top: 1px solid #000; padding-top: 2px; }
+        .footer-table { width: 100%; font-size: 8px; margin-top: 5px; border: none; }
+        .footer-table td { border: none !important; padding: 1px !important; }
         
+        tr { page-break-inside: avoid; }
         .page-break { page-break-after: always; }
     </style>
 </head>
 <body>
 
 <?php
-// SETTINGS
-$rowsPerPage = 15; 
-$chunks = array_chunk($payroll, $rowsPerPage);
-$totalPages = count($chunks);
+// 1. Sort alphabetically
+usort($payroll, function($a, $b) {
+    return strcmp($a->last_name, $b->last_name);
+});
 
-// Initialize Grand Totals
-$grand = [
-    'basic_salary' => 0, 
-    'gross_pay' => 0, 
-    'tax' => 0, 
-    'total_deductions' => 0, 
-    'net_pay' => 0
-];
+// 2. STRICT CHUNKING - NO MORE HALVING/SPLITTING LOGIC
+// Adjust this exact number to fit your page perfectly. If 20 leaves room, try 21 or 22.
+$rowsPerPage = 20; 
+$chunks = array_chunk($payroll, $rowsPerPage);
+
+$totalPages = count($chunks);
+$grand = ['basic_salary' => 0, 'gross_pay' => 0, 'tax' => 0, 'total_deductions' => 0, 'net_pay' => 0];
 $grandOther = array_fill_keys($otherColumns, 0);
 $rowNo = 1;
 
 foreach ($chunks as $pageIdx => $pageRows):
     $pageNo = $pageIdx + 1;
-    
-    // Initialize Page Subtotals
     $pt = array_fill_keys(array_keys($grand), 0);
     $ptOther = array_fill_keys($otherColumns, 0);
 ?>
@@ -117,25 +135,23 @@ foreach ($chunks as $pageIdx => $pageRows):
 <div class="info-row">
     <div class="period-box">
         Calendar Year: <span class="fw-bold"><?= date('Y', strtotime($period->date_period)) ?></span><br>
-        Fund Source: <span class="fw-bold"><?= $period->payroll_type ?></span>
+        Unit: <span class="fw-bold"><?= $period->unit ?></span>
     </div>
-    <div class="notice-box">
-        "We acknowledge receipt of the Mid-Year Bonus shown opposite our names as full compensation for services rendered."
-    </div>
+    <div class="notice-box">"We acknowledge receipt of the Mid-Year Bonus shown opposite our names."</div>
     <div class="clearfix"></div>
 </div>
 
 <table>
     <thead>
         <tr>
-            <th width="30" rowspan="2">No.</th>
-            <th width="150" rowspan="2">Name</th>
+            <th class="col-no" rowspan="2">No.</th>
+            <th width="150" rowspan="2">Name<br>(Last, First, M.I.)</th>
             <th width="100" rowspan="2">Position</th>
-            <th width="80" rowspan="2">Monthly Basic<br>Salary</th>
-            <th width="80" rowspan="2">Gross Mid-Year<br>Bonus</th>
+            <th width="80" rowspan="2">Monthly Basic Salary</th>
+            <th width="80" rowspan="2">Gross Mid-Year Bonus</th>
             <th colspan="<?= 1 + count($otherColumns) ?>">Deductions</th>
-            <th width="80" rowspan="2">Total<br>Deductions</th>
-            <th width="90" rowspan="2">Net Bonus<br>Amount</th>
+            <th width="80" rowspan="2">Total Deductions</th>
+            <th width="90" rowspan="2">Net Bonus Amount</th>
         </tr>
         <tr>
             <th width="60">W/Tax</th>
@@ -146,41 +162,43 @@ foreach ($chunks as $pageIdx => $pageRows):
     </thead>
     <tbody>
         <?php foreach ($pageRows as $row): 
-            // Add to Page Subtotal
-            $pt['basic_salary'] += $row->basic_salary;
-            $pt['gross_pay'] += $row->gross_pay;
-            $pt['tax'] += $row->tax;
-            $pt['total_deductions'] += $row->total_deductions;
-            $pt['net_pay'] += $row->net_pay;
+            $mi = !empty($row->middle_name) ? substr($row->middle_name, 0, 1) . '.' : '';
+            $displayName = strtoupper($row->last_name . ', ' . $row->name . ' ' . $mi);
 
-            // Add to Grand Total
-            $grand['basic_salary'] += $row->basic_salary;
-            $grand['gross_pay'] += $row->gross_pay;
-            $grand['tax'] += $row->tax;
-            $grand['total_deductions'] += $row->total_deductions;
-            $grand['net_pay'] += $row->net_pay;
+            $current_row_other_deductions = 0;
+            foreach($otherColumns as $col) {
+                $val = $row->parsed_deductions[$col] ?? 0;
+                $current_row_other_deductions += $val;
+                $ptOther[$col] += $val;
+                $grandOther[$col] += $val;
+            }
+            
+            $calculated_total_deductions = $row->tax + $current_row_other_deductions;
+
+            $pt['basic_salary'] += $row->basic_salary; $pt['gross_pay'] += $row->gross_pay; $pt['tax'] += $row->tax;
+            $pt['total_deductions'] += $calculated_total_deductions; $pt['net_pay'] += $row->net_pay;
+
+            $grand['basic_salary'] += $row->basic_salary; $grand['gross_pay'] += $row->gross_pay; $grand['tax'] += $row->tax;
+            $grand['total_deductions'] += $calculated_total_deductions; $grand['net_pay'] += $row->net_pay;
         ?>
         <tr>
-            <td class="text-center"><?= $rowNo++ ?></td>
-            <td class="fw-bold"><?= htmlspecialchars($row->name) ?></td>
+            <td class="col-no"><?= $rowNo++ ?></td>
+            <td class="fw-bold"><?= $displayName ?></td>
             <td><?= htmlspecialchars($row->position) ?></td>
             <td class="text-right"><?= number_format($row->basic_salary, 2) ?></td>
             <td class="text-right fw-bold"><?= number_format($row->gross_pay, 2) ?></td>
             <td class="text-right"><?= number_format($row->tax, 2) ?></td>
-            <?php foreach($otherColumns as $col): 
-                $val = $row->parsed_deductions[$col] ?? 0;
-                $ptOther[$col] += $val;
-                $grandOther[$col] += $val;
-            ?>
-                <td class="text-right"><?= number_format($val, 2) ?></td>
+            <?php foreach($otherColumns as $col): ?>
+                <td class="text-right"><?= number_format($row->parsed_deductions[$col] ?? 0, 2) ?></td>
             <?php endforeach; ?>
-            <td class="text-right fw-bold"><?= number_format($row->total_deductions, 2) ?></td>
+            <td class="text-right fw-bold"><?= number_format($calculated_total_deductions, 2) ?></td>
             <td class="text-right fw-bold" style="background-color: #fcfcfc;">₱ <?= number_format($row->net_pay, 2) ?></td>
         </tr>
         <?php endforeach; ?>
 
+        <!-- Guaranteed to render right below the rows -->
         <tr class="subtotal-row">
-            <td colspan="3" class="text-center">PAGE SUBTOTAL (Page <?= $pageNo ?> of <?= $totalPages ?>)</td>
+            <td colspan="3" class="text-center">PAGE SUBTOTAL (Page <?= $pageNo ?>)</td>
             <td class="text-right"><?= number_format($pt['basic_salary'], 2) ?></td>
             <td class="text-right"><?= number_format($pt['gross_pay'], 2) ?></td>
             <td class="text-right"><?= number_format($pt['tax'], 2) ?></td>
@@ -208,38 +226,40 @@ foreach ($chunks as $pageIdx => $pageRows):
 </table>
 
 <?php if ($pageNo == $totalPages): ?>
-<div style="margin-top: 10px; border: 1px solid #000; padding: 8px;">
-    <table style="border: none; width: 100%; margin: 0;">
-        <tr style="border: none;">
-            <td style="border: none; width: 60%; font-size: 10px;">
-                Total Amount in Words: <br>
-                <strong style="text-transform: uppercase;"><?= number_to_words($grand['net_pay']) ?> PESOS ONLY</strong>
-            </td>
-            <td style="border: none; width: 40%; text-align: right; font-size: 12px;">
-                Total Net Amount: <span class="fw-bold">₱ <?= number_format($grand['net_pay'], 2) ?></span>
-            </td>
-        </tr>
-    </table>
+<div class="cert-container">
+    <div class="cert-row">
+        <div class="cert-box">
+            <div class="cert-title">A. CERTIFIED: Services has been duly rendered as stated</div>
+            <div class="signature-line" style="margin-top: 45px;">DR. DORIS ANN S. ESPINA<br><span style="font-weight: normal; font-size: 8px;">CAO, Adm. Services Division</span></div>
+        </div>
+        <div class="cert-box">
+            <div class="cert-title">B. APPROVED FOR PAYMENT:</div>
+            <p class="text-center fw-bold" style="margin-top: 10px; font-size: 8.5px; text-transform: uppercase;"><?= ucwords(number_to_words($grand['net_pay'])) ?> and <?= date('s') ?>/100 Pesos (₱<?= number_format($grand['net_pay'], 2) ?>)</p>
+            <div class="signature-line" style="margin-top: 40px;">DR. LYDIA M. MORANTE<br><span style="font-weight: normal; font-size: 8px;">VP Admin. and Finance</span></div>
+        </div>
+    </div>
+    <div class="cert-row">
+        <div class="cert-box">
+            <div class="cert-title">C. CERTIFIED: Supporting documents complete and proper and cash available in the amount of</div>
+            <div class="text-right fw-bold" style="padding-right: 10px; font-size: 10px;"><?= number_format($grand['net_pay'], 2) ?></div>
+            <div class="signature-line" style="margin-top: 40px;">RUBY N. MANCIO, CPA<br><span style="font-weight: normal; font-size: 8px;">Head Accounting Office</span></div>
+        </div>
+        <div class="cert-box">
+            <div class="cert-title">D. CERTIFIED: Each employee whose name appears above has been paid the amount indicated opposite his/her name.</div>
+            <div class="signature-line" style="margin-top: 40px;">LEAH S. BELEÑA<br><span style="font-weight: normal; font-size: 8px;">Head Cashiering Office</span></div>
+            <table class="footer-table"><tr><td>OS/BUS/US No.</td><td class="text-right">Date:</td></tr><tr><td>JEV No.</td><td class="text-right">Date:</td></tr></table>
+        </div>
+    </div>
 </div>
 
-<table class="signature-table">
-    <tr>
-        <td>Prepared by:<br><br><br><div class="sig-line">Personnel Clerk</div>Designation</td>
-        <td>Certified Correct:<br><br><br><div class="sig-line">University Accountant</div>Accountant III</td>
-        <td>Certified Services Rendered:<br><br><br><div class="sig-line">DR. DORIS ANN S. ESPINA</div>CAO, Admin Services</td>
-    </tr>
-    <tr>
-        <td>Approved for Payment:<br><br><br><div class="sig-line">DR. LYDIA M. MORANTE</div>VPAA / OIC President</td>
-        <td>Approved by:<br><br><br><div class="sig-line">Head of Agency</div>Authorized Representative</td>
-        <td>Verified by:<br><br><br><div class="sig-line">Internal Auditor</div>Audit Section</td>
-    </tr>
-</table>
+<div style="margin-top: 20px; width: 100%; page-break-inside: avoid;">
+    <p style="font-size: 9px; margin: 0;">Prepared by:</p>
+    <p class="fw-bold" style="font-size: 11px; margin-top: 15px; text-decoration: underline; display: inline-block; text-transform: uppercase;">HONEYLEE F. CADAVIS, MM</p>
+    <p style="margin: 0; font-size: 9px;">SAO / HEAD, HRMDO</p>
+</div>
 <?php endif; ?>
 
-<?php if ($pageNo < $totalPages): ?>
-    <div class="page-break"></div>
-<?php endif; ?>
-
+<?php if ($pageNo < $totalPages): ?> <div class="page-break"></div> <?php endif; ?>
 <?php endforeach; ?>
 
 </body>

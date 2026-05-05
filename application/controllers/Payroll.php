@@ -333,7 +333,7 @@ class Payroll extends MY_Controller {
 			$period->unit
 		);
 		$paid_ids_array = $this->Get_model->getPayrollByPeriodMY($period_id);
-		$paid_ids = array_column($paid_ids_array, 'employee_id'); // get plain array of IDs
+		$paid_ids = array_column($paid_ids_array, 'employee_id');
 		
 		$data = [
 			'page'            => 'Payroll',
@@ -413,61 +413,59 @@ class Payroll extends MY_Controller {
 	}
 
 	public function export_pdf_mid($period_id) 
-		{
-			$this->load->library('pdf');
+{
+    $this->load->library('pdf');
+
+    $period  = $this->Get_model->get_period($period_id);
+    $payroll = $this->Get_model->getMidYearPayrollWithDetails($period_id);
+
+    if (empty($payroll)) {
+        $this->session->set_flashdata('error', 'No records found.');
+        redirect($_SERVER['HTTP_REFERER']);
+    }
+
+    $allColumns = [];
+
+    // 2. Process the rows
+    foreach ($payroll as &$row) {
+        if (is_array($row)) {
+            $row = (object)$row; 
+        }
+
+        $row->parsed_deductions = []; 
+        
+        if (!empty($row->less)) { 
+            $items = explode(',', $row->less);
+            foreach ($items as $item) {
+                $parts = explode(':', trim($item));
+                if (count($parts) == 2) {
+                    $name   = trim($parts[0]);
+                    $amount = (float) trim($parts[1]);
+                    $row->parsed_deductions[$name] = $amount;
+                    $allColumns[$name] = $name;
+                }
+            }
+        }
+    }
+
+    // 3. Prepare data for the View
+    $data = [
+        'period'       => $period,
+        'payroll'      => $payroll, 
+        'otherColumns' => array_values($allColumns)
+    ];
+
+    // 4. Generate PDF
+    $html = $this->load->view('payroll/layout/midyear_payroll_pdf', $data, true);
+    $this->pdf->loadHtml($html);
+    $this->pdf->setPaper([0, 0, 612, 936], 'landscape'); // Long Bond Landscape
+    $this->pdf->render();
     
-			$period  = $this->Get_model->get_period($period_id);
-			$payroll = $this->Get_model->getPayrollByPeriodMY($period_id);
-
-			if (empty($payroll)) {
-				$this->session->set_flashdata('error', 'No records found.');
-				redirect($_SERVER['HTTP_REFERER']);
-			}
-
-			$allColumns = [];
-
-			// 2. Process the rows
-			foreach ($payroll as &$row) {
-				// --- THE FIX ---
-				// If $row is an array, cast it to an object so $row->basic_salary works
-				if (is_array($row)) {
-					$row = (object)$row; 
-				}
-
-				$row->parsed_deductions = []; 
-				
-				// Use your database attribute 'less'
-				if (!empty($row->less)) { 
-					$items = explode(',', $row->less);
-					foreach ($items as $item) {
-						$parts = explode(':', trim($item));
-						if (count($parts) == 2) {
-							$name   = trim($parts[0]);
-							$amount = (float) trim($parts[1]);
-							$row->parsed_deductions[$name] = $amount;
-							
-							// Collect unique loan names for headers
-							$allColumns[$name] = $name;
-						}
-					}
-				}
-			}
-
-			// 3. Prepare data for the View
-			$data = [
-				'period'       => $period,
-				'payroll'      => $payroll, 
-				'otherColumns' => array_values($allColumns)
-			];
-
-			// 4. Generate PDF
-			$html = $this->load->view('payroll/layout/midyear_payroll_pdf', $data, true);
-			$this->pdf->loadHtml($html);
-			$this->pdf->setPaper([0, 0, 612, 936], 'landscape'); // Long Bond Landscape
-			$this->pdf->render();
-			
-			$this->pdf->stream("MIDYEAR_BONUS_PAYROLL.pdf", ['Attachment' => 1]);
-		}
+    // --- UPDATED FILENAME ---
+    // Appending the payroll number to the filename for better organization
+    $filename = "MIDYEAR_BONUS_PAYROLL_" . $period->payroll_number . ".pdf";
+    $this->pdf->stream($filename, ['Attachment' => 1]);
+}
 	public function export_pdf_subsistence($period_id) 
 		{
 			$this->load->library('pdf');

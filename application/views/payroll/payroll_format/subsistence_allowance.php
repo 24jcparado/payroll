@@ -162,16 +162,47 @@
                             <div class="row g-0">
                                 <div class="col-md-8 p-4" style="background: #f8faff; border-left: 5px solid #4f46e5;">
                                     <div class="d-flex align-items-center mb-3">
-                                        <div class="bg-primary bg-opacity-10 p-2 rounded-3 me-3"><i class="bi bi-cloud-check-fill text-primary fs-4"></i></div>
+                                        <div class="bg-primary bg-opacity-10 p-2 rounded-3 me-3">
+                                            <i class="bi bi-cloud-check-fill text-primary fs-4"></i>
+                                        </div>
                                         <div>
                                             <h6 class="mb-0 fw-bold text-dark">Submitted to Admin Office</h6>
                                             <small class="text-muted text-uppercase fw-bold" style="font-size: 10px; letter-spacing: 1px;">Document Verification Stage</small>
                                         </div>
                                     </div>
-                                    <p class="text-muted small mb-4">This payroll batch has been officially timestamped and transmitted. The computation is currently <strong>locked</strong>.</p>
+                                    
+                                    <p class="text-muted small mb-4">
+                                        This payroll batch has been officially timestamped and transmitted. The computation is currently <strong>locked</strong> to preserve data integrity during the review process.
+                                    </p>
+
+                                    <div class="d-flex gap-3">
+                                        <div class="p-3 bg-white rounded-3 border flex-fill">
+                                            <label class="text-uppercase text-muted fw-bold mb-1" style="font-size: 9px;">Tracking Token</label>
+                                            <div class="h5 mb-0 fw-bold text-primary" style="font-family: 'JetBrains Mono', monospace;">
+                                                <?= $token_id ?>
+                                            </div>
+                                        </div>
+                                        <div class="p-3 bg-white rounded-3 border flex-fill">
+                                            <label class="text-uppercase text-muted fw-bold mb-1" style="font-size: 9px;">Current Status</label>
+                                            <div class="h6 mb-0 fw-bold text-warning">
+                                                <i class="bi bi-hourglass-split me-1"></i> PENDING APPROVAL
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-4 d-flex flex-column align-items-center justify-content-center p-4" style="background: #ffffff; border-left: 1px dashed #e2e8f0;">
+                                    <div class="text-center">
+                                        <img src="<?= base_url($qr_code) ?>" 
+                                            alt="Payroll Token QR" 
+                                            class="img-fluid rounded-3 mb-2 border p-1 bg-white shadow-sm"
+                                            style="width: 200px; height: 200px;">
+                                        <div class="fw-bold text-dark" style="font-size: 10px; letter-spacing: 2px;">SCAN TO VERIFY</div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
+
                     <?php elseif($status == 1): ?>
                         <div class="alert border-0 shadow-sm rounded-4 d-flex align-items-center p-3" style="background: #fffbeb; border-left: 5px solid #f59e0b !important;">
                             <div class="spinner-grow text-warning spinner-grow-sm me-3"></div>
@@ -538,6 +569,62 @@ $(document).ready(function() {
             }
         });
     };
+});
+
+$(document).on('click', '.submit_payroll', function () {
+
+    let period_id = $(this).data('period_id');
+    let payroll_number = $(this).data('payroll_number');
+
+    Swal.fire({
+        title: 'Submit Payroll?',
+        text: "Once submitted, this payroll will be forwarded for processing.",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#3085d6',
+        cancelButtonColor: '#d33',
+        confirmButtonText: 'Yes, submit it!',
+        cancelButtonText: 'Cancel'
+    }).then((result) => {
+
+        if (result.isConfirmed) {
+
+            $.ajax({
+                url: "<?= base_url('payroll/submit_payroll') ?>",
+                type: "POST",
+                data: {
+                    period_id: period_id,
+                    payroll_number: payroll_number
+                },
+                dataType: "json",
+                success: function (res) {
+                    if (res.status === 'success') {
+                        Swal.fire({
+                            title: 'Submitted!',
+                            text: 'Payroll submitted successfully.',
+                            icon: 'success',
+                            confirmButtonColor: '#3085d6'
+                        }).then(() => {
+                            location.reload();
+                        });
+                    } else {
+                        Swal.fire({
+                            title: 'Error',
+                            text: 'Something went wrong.',
+                            icon: 'error'
+                        });
+                    }
+                },
+                error: function () {
+                    Swal.fire({
+                        title: 'Server Error',
+                        text: 'Unable to process request.',
+                        icon: 'error'
+                    });
+                }
+            });
+        }
+    });
 });
 
 </script>

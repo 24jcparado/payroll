@@ -303,6 +303,31 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                 ->result();
         }
 
+        public function getMidYearPayrollWithDetails($payroll_period_id)
+            {
+                return $this->db
+                    ->select('
+                        my.*, 
+                        e.name, 
+                        e.last_name, 
+                        e.middle_name, 
+                        e.ext, 
+                        e.position,
+                        p.date_period,
+                        p.qr_code,
+                        p.payroll_type,
+                        p.token_id
+                    ')
+                    ->from('tbl_py_midyear_bonus my')
+                    ->join('tbl_employee e', 'e.employee_id = my.employee_id', 'left')
+                    ->join('tbl_py_payroll_period p', 'p.payroll_period_id = my.payroll_period_id', 'left')
+                    ->where('my.payroll_period_id', $payroll_period_id)
+                    ->order_by('e.last_name', 'ASC') // Sorting Alphabetically by Last Name
+                    ->order_by('e.name', 'ASC') // Secondary Sort by First Name[cite: 1]
+                    ->get()
+                    ->result(); 
+            }
+
 
         public function getPayrollByPeriodDW($payroll_period_id)
         {

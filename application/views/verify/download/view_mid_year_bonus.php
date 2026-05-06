@@ -178,6 +178,9 @@
         background: #cbd5e1;
         border-radius: 10px;
     }
+    .dropdown-menu {
+        z-index: 1050 !important; /* Forces the menu to sit above everything else */
+    }
 </style>
 </head>
 <body>
@@ -238,18 +241,42 @@
     <div class="table-container">
         <div class="d-flex justify-content-between align-items-center p-4 border-bottom">
             <h6 class="fw-bold mb-0 text-dark"><i class="bi bi-table text-primary me-2"></i><?=$payroll_type ?? 'Payroll'?> Register</h6>
+            
             <div>
-                <button class="btn btn-sm btn-outline-secondary rounded-pill px-3 hover-elevate me-2">
-                    <i class="bi bi-download me-1"></i> Export
-                </button>
-                <button class="btn btn-sm btn-primary rounded-pill px-3 hover-elevate" onclick="window.print()">
-                    <i class="bi bi-printer me-1"></i> Print
-                </button>
+                <!-- Export Dropdown Menu -->
+                <div class="dropdown d-inline-block me-2">
+                    <button class="btn btn-sm btn-outline-secondary rounded-pill px-3 hover-elevate dropdown-toggle" type="button" id="exportDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="bi bi-download me-1"></i> Export Options
+                    </button>
+                    
+                    <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 rounded-3 mt-2" aria-labelledby="exportDropdown">
+                        <li>
+                            <a class="dropdown-item py-2 fw-semibold" href="<?= base_url('receiver/download_pdf/'.$period_id) ?>" target="_blank">
+                                <i class="bi bi-file-earmark-pdf text-danger me-2"></i> Payroll (PDF)
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item py-2 fw-semibold" href="<?= base_url('verify/download_excel_midyear_payroll/'.$period_id) ?>" target="_blank">
+                                <i class="bi bi-file-earmark-excel text-success me-2"></i> Payroll (Excel)
+                            </a>
+                        </li>
+                        <li><hr class="dropdown-divider opacity-50"></li>
+                        <li>
+                            <a class="dropdown-item py-2 fw-semibold" href="#" onclick="generatePayslips(<?= $period_id ?>)">
+                                <i class="bi bi-receipt text-secondary me-2"></i> Individual Payslips (PDF)
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Primary Download Button -->
+                <a class="btn btn-sm btn-primary rounded-pill px-3 hover-elevate" href="#" id="btnPrint" data-url="<?= base_url('receiver/export_pdf_mid/'.$period_id) ?>">
+                    <i class="bi bi-file-pdf me-2"></i>Download Payroll
+                </a>
             </div>
         </div>
 
         <?php
-        // 1. SAFELY GATHER ALL DEDUCTION NAMES
         $deduction_names = [];
         if (!empty($payrolls)) {
             foreach ($payrolls as $payroll) {
@@ -367,31 +394,35 @@
                             <td class="text-center font-monospace fw-bold text-primary netpay" style="font-size: 1.15rem;">₱ <?= number_format((float)($p->net_pay ?? 0), 2) ?></td>
 
                             <td class="text-center pe-4 text-nowrap">
-                                <button type="button" 
-                                        class="btn btn-light border btn-edit text-primary me-1" 
-                                        data-id="<?= htmlspecialchars($p->midyear_id ?? '') ?>" 
-                                        data-name="<?= htmlspecialchars($p->name ?? '') ?>"
-                                        data-basic="<?= htmlspecialchars($p->basic_salary ?? 0) ?>"
-                                        data-gross="<?= htmlspecialchars($p->gross_pay ?? 0) ?>"
-                                        data-tax="<?= htmlspecialchars($p->tax ?? 0) ?>"
-                                        data-deductions='<?= htmlspecialchars(json_encode($less_values), ENT_QUOTES, 'UTF-8') ?>'
-                                        onclick="openEditModal(this)"
-                                        data-bs-toggle="tooltip" 
-                                        title="Edit Row">
-                                    <i class="bi bi-pencil-square"></i>
-                                </button>
+                                <?php if ($this->session->userdata('receiver_role') === 'accounting'): ?>
+                                    
+                                    <button type="button" 
+                                            class="btn btn-light border btn-edit text-primary me-1" 
+                                            data-id="<?= htmlspecialchars($p->midyear_id ?? '') ?>" 
+                                            data-name="<?= htmlspecialchars($p->name ?? '') ?>"
+                                            data-basic="<?= htmlspecialchars($p->basic_salary ?? 0) ?>"
+                                            data-gross="<?= htmlspecialchars($p->gross_pay ?? 0) ?>"
+                                            data-tax="<?= htmlspecialchars($p->tax ?? 0) ?>"
+                                            data-deductions='<?= htmlspecialchars(json_encode($less_values), ENT_QUOTES, 'UTF-8') ?>'
+                                            onclick="openEditModal(this)"
+                                            data-bs-toggle="tooltip" 
+                                            title="Edit Row">
+                                        <i class="bi bi-pencil-square"></i>
+                                    </button>
 
-                                <!-- UPDATED: Button turns solid blue with a filled icon if there are remarks -->
-                                <button type="button" 
-                                        class="btn border btn-remark <?= $has_remarks ? 'btn-info text-white shadow-sm' : 'btn-light text-info' ?>" 
-                                        data-id="<?= htmlspecialchars($p->midyear_id ?? '') ?>" 
-                                        data-name="<?= htmlspecialchars($p->name ?? '') ?>"
-                                        data-remarks="<?= htmlspecialchars($p->midyear_remarks ?? '') ?>" 
-                                        onclick="openRemarksModal(this)"
-                                        data-bs-toggle="tooltip" 
-                                        title="<?= $has_remarks ? 'View/Edit Remarks' : 'Add Remarks' ?>">
-                                    <i class="bi <?= $has_remarks ? 'bi-chat-text-fill' : 'bi-chat-text' ?>"></i>
-                                </button>
+                                    <!-- UPDATED: Button turns solid blue with a filled icon if there are remarks -->
+                                    <button type="button" 
+                                            class="btn border btn-remark <?= $has_remarks ? 'btn-info text-white shadow-sm' : 'btn-light text-info' ?>" 
+                                            data-id="<?= htmlspecialchars($p->midyear_id ?? '') ?>" 
+                                            data-name="<?= htmlspecialchars($p->name ?? '') ?>"
+                                            data-remarks="<?= htmlspecialchars($p->midyear_remarks ?? '') ?>" 
+                                            onclick="openRemarksModal(this)"
+                                            data-bs-toggle="tooltip" 
+                                            title="<?= $has_remarks ? 'View/Edit Remarks' : 'Add Remarks' ?>">
+                                        <i class="bi <?= $has_remarks ? 'bi-chat-text-fill' : 'bi-chat-text' ?>"></i>
+                                    </button>
+
+                                <?php endif; ?>
                             </td>
                         </tr>
                         <?php endforeach; ?>
@@ -627,7 +658,7 @@
         // payload['<?= $this->security->get_csrf_token_name() ?>'] = $('input[name="<?= $this->security->get_csrf_token_name() ?>"]').val();
 
         $.ajax({
-            url: '<?= base_url("payroll/update_payrollmidyear_row") ?>',
+            url: '<?= base_url("receiver/update_payrollmidyear_row") ?>',
             type: 'POST',
             data: payload,
             dataType: 'json',
@@ -774,21 +805,16 @@
             remarks: remarks
         };
 
-        // Add CSRF Token if required
-        // payload['<?= $this->security->get_csrf_token_name() ?>'] = $('input[name="<?= $this->security->get_csrf_token_name() ?>"]').val();
 
         $.ajax({
-            url: '<?= base_url("payroll/update_remarks_midyear") ?>', // Points to our new controller function
+            url: '<?= base_url("receiver/update_remarks_midyear") ?>',
             type: 'POST',
             data: payload,
             dataType: 'json',
             success: function(response) {
                 if(response.status) {
-                    // Update the button's data attribute so it remembers the new remark
                     const button = $(`button.btn-remark[data-id='${id}']`);
                     button.data('remarks', remarks);
-                    
-                    // Optional: Change the button style slightly if it has remarks
                     if(remarks.trim() !== "") {
                         button.removeClass('btn-light').addClass('btn-info text-white');
                     } else {
@@ -807,11 +833,64 @@
                     Swal.fire('Error', response.message || 'Failed to save remarks', 'error');
                 }
             },
-            error: function() {
-                Swal.fire('Error', 'Server failed to process the request.', 'error');
+            error: function(xhr, status, error) {
+                // 1. Log the full error to your browser's console
+                console.error("Raw Error Response:", xhr.responseText);
+
+                // 2. Show a more detailed alert
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Server Error: ' + xhr.status, // e.g., 403, 404, or 500
+                    text: 'The detailed error has been logged to the console. Press F12 to view it.',
+                });
+                
+                // Optional: If you want to force the error to show on your screen immediately 
+                // (Warning: this will replace your current page with the error screen)
+                // document.write(xhr.responseText); 
             }
         });
     }
+
+    $(document).ready(function() {
+    $('#btnPrint').on('click', function(e) {
+        e.preventDefault();
+        const url = $(this).data('url');
+        window.open(url, '_blank'); // Opens PDF in new tab
+    });
+    window.generatePayslips = function(period_id) {
+        Swal.fire({
+            title: 'Generate Payslips?',
+            text: "This will prepare individual payslips for all processed employees.",
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#198754',
+            confirmButtonText: 'Yes, Generate'
+        }).then((result) => {
+            if (result.isConfirmed) {
+
+                Swal.fire({
+                    title: 'Processing...',
+                    didOpen: () => { Swal.showLoading() }
+                });
+
+                // 1. Call the backend to process the data (expects JSON)
+                $.post("<?= base_url('payroll/process_payslips/') ?>" + period_id, function(res) {
+                    if(res.status === 'success') {
+                        
+                        // 2. Show success message
+                        Swal.fire('Success!', res.message, 'success').then(() => {
+                            // 3. AFTER they click OK, open the layout in a new tab
+                            window.open("<?= base_url('payroll/view_payslips/') ?>" + period_id, '_blank');
+                        });
+
+                    } else {
+                        Swal.fire('Error', res.message, 'error');
+                    }
+                }, 'json');
+            }
+        });
+    };
+});
 </script>
 </body>
 </html>

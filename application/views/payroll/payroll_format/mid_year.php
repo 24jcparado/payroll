@@ -122,7 +122,7 @@
         <?php endif; ?>
 
         <div class="row g-4">
-            <div class="col-xl-4 col-lg-5">
+            <div class="col-xl-3 col-lg-4">
                 <div class="card border-0 shadow-sm rounded-4 border-top border-primary border-4">
                     <div class="card-header bg-white border-0 py-3">
                         <h6 class="mb-0 fw-bold">Bonus Computation</h6>
@@ -170,7 +170,7 @@
                                     <span class="ledger-label">Monthly Basic Salary</span>
                                     <div class="amount-input-group readonly-money">
                                         <span class="currency-symbol">₱</span>
-                                        <input type="text" id="basic_salary" name="basic_salary" class="money-field" readonly>
+                                        <input type="text" id="basic_salary" name="basic_salary" class="money-field">
                                     </div>
                                 </div>
                                 <div class="col-12">
@@ -209,7 +209,7 @@
                 </div>
             </div>
 
-            <div class="col-xl-8 col-lg-7">
+            <div class="col-xl-9 col-lg-8">
                 <div class="col-12 mb-4">
                     <?php if($status >= 2 && $status < 7): ?>
                         <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
@@ -295,7 +295,8 @@
                                 <i class="bi bi-download me-1 text-primary"></i> Operations
                             </button>
                             <ul class="dropdown-menu dropdown-menu-end shadow border-0 p-2">
-                                <li><a class="dropdown-item py-2" href="#" id="btnPrint" data-url="<?= base_url('payroll/export_pdf_mid/'.$period_id) ?>">
+                                <li>
+                                    <a class="dropdown-item py-2" href="#" id="btnPrint" data-url="<?= base_url('payroll/export_pdf_mid/'.$period_id) ?>">
                                     <i class="bi bi-file-pdf me-2 text-danger"></i>Download Payroll PDF
                                 </a></li>
                                 <li><a class="dropdown-item py-2" href="<?= base_url('payroll/export_transmittal_pdf/'. $period_id) ?>">
@@ -487,15 +488,7 @@ function computePayroll() {
 }
 
 
-/* ===============================
-    AUTO RECALCULATE
-================================ */
-
-$(document).on('keyup change', '#tax', function(){
-    computePayroll();
-});
-
-$(document).on('keyup change', '.loan-input', function(){
+$(document).on('keyup change input', '#basic_salary, #tax, .loan-input', function(){
     computePayroll();
 });
 

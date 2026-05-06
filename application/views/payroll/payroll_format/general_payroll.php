@@ -247,7 +247,7 @@
                                     <span class="ledger-label">Monthly Basic Salary</span>
                                     <div class="amount-input-group readonly-money">
                                         <span class="currency-symbol">₱</span>
-                                        <input type="text" id="basic_salary" name="basic_salary" class="money-field readonly-field" readonly>
+                                        <input type="text" id="basic_salary" name="basic_salary" class="money-field readonly-field">
                                     </div>
                                 </div>
                                 

@@ -2618,79 +2618,38 @@ public function update_employee_data() {
             redirect($_SERVER['HTTP_REFERER']);
         }
     }
-public function update_payrollmidyear_row()
-    {
-        $id           = $this->input->post('id');
-        $basic_salary = (float) $this->input->post('basic_salary');
-        $gross_pay    = (float) $this->input->post('gross_pay');
-        $tax          = (float) $this->input->post('tax');
-        if(empty($id)) {
-            echo json_encode(['status' => false, 'message' => 'Invalid Request. Missing ID.']);
-            return;
-        }
-        $existing_record = $this->db->get_where('tbl_py_midyear_bonus', ['midyear_id' => $id])->row();
 
-        if(!$existing_record) {
-            echo json_encode(['status' => false, 'message' => 'Record not found in database.']);
-            return;
-        }
-
-        $static_deductions_total = 0;
-        if (!empty($existing_record->less)) {
-            $items = explode(',', $existing_record->less);
-            foreach ($items as $item) {
-                $parts = explode(':', $item);
-                if (count($parts) == 2) {
-                    $static_deductions_total += (float) trim($parts[1]);
-                }
-            }
-        }
-
-        $total_deductions = $static_deductions_total + $tax;
-        $net_pay = $gross_pay - $total_deductions;
-        $update_data = [
-            'basic_salary'     => $basic_salary,
-            'gross_pay'        => $gross_pay,
-            'tax'              => $tax,
-            'total_deductions' => $total_deductions,
-            'net_pay'          => $net_pay
-        ];
-
-        $this->db->where('midyear_id', $id);
-        $result = $this->db->update('tbl_py_midyear_bonus', $update_data);
-
-        // 6. Return JSON response back to JavaScript
-        if ($result) {
-            echo json_encode(['status' => true]);
-        } else {
-            echo json_encode(['status' => false, 'message' => 'Failed to update database.']);
-        }
-	}
 	public function update_remarks_midyear()
-    {
-        $id = $this->input->post('id');
-        $remarks = $this->input->post('remarks');
+	{
+		// Clear any hidden whitespace or PHP notices that might break the JSON
+		if (ob_get_length()) ob_clean(); 
 
-        if(empty($id)) {
-            echo json_encode(['status' => false, 'message' => 'Invalid Request. Missing ID.']);
-            return;
-        }
+		$id = $this->input->post('id');
+		$remarks = $this->input->post('remarks');
 
-        // Prepare the data to update
-        $update_data = [
-            'midyear_remarks' => $remarks
-        ];
+		if(empty($id)) {
+			return $this->output
+				->set_content_type('application/json')
+				->set_output(json_encode(['status' => false, 'message' => 'Invalid Request. Missing ID.']));
+		}
 
-        // Update the database
-        $this->db->where('midyear_id', $id);
-        $result = $this->db->update('tbl_py_midyear_bonus', $update_data);
+		$update_data = [
+			'midyear_remarks' => $remarks
+		];
+		
+		$this->db->where('midyear_id', $id);
+		$result = $this->db->update('tbl_py_midyear_bonus', $update_data);
 
-        if ($result) {
-            echo json_encode(['status' => true]);
-        } else {
-            echo json_encode(['status' => false, 'message' => 'Failed to save remarks to the database.']);
-        }
-    }
+		if ($result) {
+			return $this->output
+				->set_content_type('application/json')
+				->set_output(json_encode(['status' => true]));
+		} else {
+			return $this->output
+				->set_content_type('application/json')
+				->set_output(json_encode(['status' => false, 'message' => 'Failed to save remarks.']));
+		}
+	}
 
 	public function save_subsistence_payroll() {
 		if (!$this->input->is_ajax_request()) { exit('No direct script access allowed'); }
